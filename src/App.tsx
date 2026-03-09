@@ -81,20 +81,43 @@ export default function App() {
   };
 
   const fetchChapters = async (novelId: string) => {
-    const { data, error } = await supabase
-      .from('chapters')
-      .select('*')
-      .eq('novel_id', novelId)
-      .order('chapter_number', { ascending: true });
-    
-    if (error) console.error('Error fetching chapters:', error);
-    else {
-      setChapters(data || []);
-      if (data && data.length > 0) {
-        setSelectedChapter(data[0]);
-        setArabicContent(data[0].content_arabic || '');
+    setIsLoading(true);
+    let allChapters: Chapter[] = [];
+    let from = 0;
+    const step = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('chapters')
+        .select('*')
+        .eq('novel_id', novelId)
+        .order('chapter_number', { ascending: true })
+        .range(from, from + step - 1);
+      
+      if (error) {
+        console.error('Error fetching chapters:', error);
+        hasMore = false;
+      } else {
+        const batch = data || [];
+        allChapters = [...allChapters, ...batch];
+        if (batch.length < step) {
+          hasMore = false;
+        } else {
+          from += step;
+        }
       }
     }
+
+    setChapters(allChapters);
+    if (allChapters.length > 0) {
+      // Only set selected chapter if none is selected or if we just switched novel
+      if (!selectedChapter || !allChapters.find(c => c.id === selectedChapter.id)) {
+        setSelectedChapter(allChapters[0]);
+        setArabicContent(allChapters[0].content_arabic || '');
+      }
+    }
+    setIsLoading(false);
   };
 
   const handleAddNovel = async (e: React.FormEvent) => {
@@ -198,13 +221,35 @@ export default function App() {
 
     setIsUploading(true);
     
-    // Fetch existing chapter numbers to avoid duplicates
-    const { data: existingChapters } = await supabase
-      .from('chapters')
-      .select('chapter_number')
-      .eq('novel_id', selectedNovel.id);
+    // Fetch ALL existing chapter numbers to avoid duplicates (handling Supabase 1000 limit)
+    let allExistingChapters: { chapter_number: number }[] = [];
+    let from = 0;
+    const step = 1000;
+    let hasMore = true;
+
+    while (hasMore) {
+      const { data, error } = await supabase
+        .from('chapters')
+        .select('chapter_number')
+        .eq('novel_id', selectedNovel.id)
+        .range(from, from + step - 1);
+      
+      if (error) {
+        console.error('Error fetching existing chapters:', error);
+        hasMore = false;
+      } else {
+        const batch = data || [];
+        allExistingChapters = [...allExistingChapters, ...batch];
+        if (batch.length < step) {
+          hasMore = false;
+        } else {
+          from += step;
+        }
+      }
+    }
     
-    const existingNumbers = new Set(existingChapters?.map(c => c.chapter_number) || []);
+    const existingNumbers = new Set(allExistingChapters.map(c => c.chapter_number));
+    const maxExistingNum = allExistingChapters.reduce((max, c) => Math.max(max, c.chapter_number), 0);
 
     const reader = new FileReader();
     reader.onload = async (event) => {
@@ -214,7 +259,6 @@ export default function App() {
       const markers = Array.from(text.matchAll(chapterRegex));
       
       const parsedChapters: any[] = [];
-      const maxExistingNum = existingChapters?.reduce((max, c) => Math.max(max, c.chapter_number), 0) || 0;
       
       if (markers.length === 0) {
         const nextNum = maxExistingNum + 1;
