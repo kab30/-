@@ -20,7 +20,8 @@ import {
   Image as ImageIcon,
   Languages,
   BookOpen,
-  Loader2
+  Loader2,
+  Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -46,8 +47,11 @@ export default function App() {
   const [pendingChapters, setPendingChapters] = useState<any[]>([]);
   const [showUploadPreview, setShowUploadPreview] = useState(false);
   const [selectedPendingIndices, setSelectedPendingIndices] = useState<Set<number>>(new Set());
+  const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
+  const [deleteRangeStart, setDeleteRangeStart] = useState('');
+  const [deleteRangeEnd, setDeleteRangeEnd] = useState('');
 
   // Form states
   const [newNovelTitle, setNewNovelTitle] = useState('');
@@ -120,6 +124,87 @@ export default function App() {
     setIsLoading(false);
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedChapterIds.size === 0 || !selectedNovel) return;
+    if (!confirm(`هل أنت متأكد من حذف ${selectedChapterIds.size} فصل؟`)) return;
+
+    setIsLoading(true);
+    const { error } = await supabase
+      .from('chapters')
+      .delete()
+      .in('id', Array.from(selectedChapterIds));
+
+    if (error) {
+      alert('خطأ في حذف الفصول');
+    } else {
+      const deletedIds = Array.from(selectedChapterIds);
+      if (selectedChapter && deletedIds.includes(selectedChapter.id)) {
+        setSelectedChapter(null);
+        setArabicContent('');
+      }
+      setSelectedChapterIds(new Set());
+      fetchChapters(selectedNovel.id);
+    }
+    setIsLoading(false);
+  };
+
+  const handleDeleteRange = async () => {
+    const start = parseInt(deleteRangeStart);
+    const end = parseInt(deleteRangeEnd);
+    if (isNaN(start) || isNaN(end) || !selectedNovel) {
+      alert('يرجى إدخال نطاق صحيح');
+      return;
+    }
+
+    if (!confirm(`هل أنت متأكد من حذف الفصول من ${start} إلى ${end}؟`)) return;
+
+    setIsLoading(true);
+    const { error } = await supabase
+      .from('chapters')
+      .delete()
+      .eq('novel_id', selectedNovel.id)
+      .gte('chapter_number', start)
+      .lte('chapter_number', end);
+
+    if (error) {
+      alert('خطأ في حذف نطاق الفصول');
+    } else {
+      // Check if selected chapter is in range
+      if (selectedChapter && selectedChapter.chapter_number >= start && selectedChapter.chapter_number <= end) {
+        setSelectedChapter(null);
+        setArabicContent('');
+      }
+      setDeleteRangeStart('');
+      setDeleteRangeEnd('');
+      fetchChapters(selectedNovel.id);
+    }
+    setIsLoading(false);
+  };
+
+  const toggleChapterSelection = (id: string) => {
+    const newSelection = new Set(selectedChapterIds);
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
+    setSelectedChapterIds(newSelection);
+  };
+
+  const handleApplyDeleteRangeSelection = () => {
+    const start = parseInt(deleteRangeStart);
+    const end = parseInt(deleteRangeEnd);
+    if (isNaN(start) || isNaN(end)) return;
+
+    const newSelection = new Set(selectedChapterIds);
+    chapters.forEach(chap => {
+      if (chap.chapter_number >= start && chap.chapter_number <= end) {
+        newSelection.add(chap.id);
+      }
+    });
+    setSelectedChapterIds(newSelection);
+  };
+
   const handleAddNovel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newNovelTitle) return;
@@ -166,12 +251,19 @@ export default function App() {
       .filter((_, idx) => selectedPendingIndices.has(idx))
       .map(({ isDuplicate, ...rest }) => rest);
 
+    // Deduplicate by chapter_number within the upload set (keep the last one)
+    const uniqueChaptersMap = new Map();
+    chaptersToUpload.forEach(chap => {
+      uniqueChaptersMap.set(chap.chapter_number, chap);
+    });
+    const finalChaptersToUpload = Array.from(uniqueChaptersMap.values());
+
     const batchSize = 50;
     let hasError = false;
     
-    for (let i = 0; i < chaptersToUpload.length; i += batchSize) {
-      const batch = chaptersToUpload.slice(i, i + batchSize);
-      const { error } = await supabase.from('chapters').insert(batch);
+    for (let i = 0; i < finalChaptersToUpload.length; i += batchSize) {
+      const batch = finalChaptersToUpload.slice(i, i + batchSize);
+      const { error } = await supabase.from('chapters').upsert(batch, { onConflict: 'novel_id,chapter_number' });
       if (error) {
         console.error('Error inserting batch:', error);
         hasError = true;
@@ -182,7 +274,7 @@ export default function App() {
     if (hasError) {
       alert('حدث خطأ أثناء رفع بعض الفصول. يرجى التحقق من القائمة.');
     } else {
-      alert(`تم رفع ${chaptersToUpload.length} فصل بنجاح.`);
+      alert(`تم رفع ${finalChaptersToUpload.length} فصل بنجاح.`);
       setShowUploadPreview(false);
       setPendingChapters([]);
       setSelectedPendingIndices(new Set());
@@ -674,52 +766,126 @@ export default function App() {
                       </select>
                     </div>
 
-                    <div className="hidden lg:block max-h-[500px] overflow-y-auto bg-white rounded-2xl border border-stone-200 shadow-sm">
-                      <div className="p-3 text-xs font-bold text-stone-400 border-b border-stone-100 flex justify-between items-center">
-                        <span>{searchQuery ? `نتائج البحث: ${filteredChapters.length}` : 'اسحب لإعادة الترتيب'}</span>
-                        {!searchQuery && <GripVertical size={14} />}
-                      </div>
-                      <div className="space-y-0">
-                        {filteredChapters.map((chap, index) => (
-                          <div
-                            key={chap.id}
-                            draggable={!searchQuery}
-                            onDragStart={(e) => {
-                              if (searchQuery) return;
-                              e.dataTransfer.setData('text/plain', index.toString());
-                            }}
-                            onDragOver={(e) => e.preventDefault()}
-                            onDrop={(e) => {
-                              if (searchQuery) return;
-                              e.preventDefault();
-                              const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
-                              const toIndex = index;
-                              if (fromIndex === toIndex) return;
-                              
-                              const newChapters = [...chapters];
-                              const [moved] = newChapters.splice(fromIndex, 1);
-                              newChapters.splice(toIndex, 0, moved);
-                              handleReorderChapters(newChapters);
-                            }}
-                            className={cn(
-                              "w-full text-right p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors text-sm flex items-center justify-between group",
-                              !searchQuery && "cursor-move",
-                              selectedChapter?.id === chap.id ? "bg-emerald-50 text-emerald-700 font-bold border-r-4 border-r-emerald-600" : "text-stone-600"
-                            )}
-                            onClick={() => {
-                              setSelectedChapter(chap);
-                              setArabicContent(chap.content_arabic || '');
-                            }}
+                    <div className="space-y-4">
+                      <div className="flex flex-col gap-3 p-3 bg-stone-100 rounded-2xl border border-stone-200">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-stone-500">إجراءات جماعية</span>
+                          {selectedChapterIds.size > 0 && (
+                            <button 
+                              onClick={handleDeleteSelected}
+                              className="text-xs font-bold text-red-600 hover:text-red-700 flex items-center gap-1"
+                            >
+                              <Trash2 size={12} />
+                              حذف ({selectedChapterIds.size})
+                            </button>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <input 
+                            type="number" 
+                            placeholder="من" 
+                            className="w-full p-2 text-xs bg-white border border-stone-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500"
+                            value={deleteRangeStart}
+                            onChange={(e) => setDeleteRangeStart(e.target.value)}
+                          />
+                          <input 
+                            type="number" 
+                            placeholder="إلى" 
+                            className="w-full p-2 text-xs bg-white border border-stone-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500"
+                            value={deleteRangeEnd}
+                            onChange={(e) => setDeleteRangeEnd(e.target.value)}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={handleApplyDeleteRangeSelection}
+                            className="flex-1 py-1.5 text-[10px] font-bold bg-white border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
                           >
-                            <div className="flex items-center gap-2 flex-1">
-                              <span className="flex-1">{chap.title || `الفصل ${chap.chapter_number}`}</span>
-                              {chap.content_arabic && chap.content_arabic.trim().length > 0 && (
-                                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" title="مترجم" />
+                            تحديد النطاق
+                          </button>
+                          <button 
+                            onClick={handleDeleteRange}
+                            className="flex-1 py-1.5 text-[10px] font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                          >
+                            حذف النطاق
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <button 
+                            onClick={() => setSelectedChapterIds(new Set(chapters.map(c => c.id)))}
+                            className="flex-1 py-1 text-[10px] font-bold text-emerald-600 hover:underline"
+                          >
+                            تحديد الكل
+                          </button>
+                          <button 
+                            onClick={() => setSelectedChapterIds(new Set())}
+                            className="flex-1 py-1 text-[10px] font-bold text-stone-400 hover:underline"
+                          >
+                            إلغاء التحديد
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="hidden lg:block max-h-[500px] overflow-y-auto bg-white rounded-2xl border border-stone-200 shadow-sm">
+                        <div className="p-3 text-xs font-bold text-stone-400 border-b border-stone-100 flex justify-between items-center">
+                          <span>{searchQuery ? `نتائج البحث: ${filteredChapters.length}` : 'اسحب لإعادة الترتيب'}</span>
+                          {!searchQuery && <GripVertical size={14} />}
+                        </div>
+                        <div className="space-y-0">
+                          {filteredChapters.map((chap, index) => (
+                            <div
+                              key={chap.id}
+                              draggable={!searchQuery}
+                              onDragStart={(e) => {
+                                if (searchQuery) return;
+                                e.dataTransfer.setData('text/plain', index.toString());
+                              }}
+                              onDragOver={(e) => e.preventDefault()}
+                              onDrop={(e) => {
+                                if (searchQuery) return;
+                                e.preventDefault();
+                                const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                                const toIndex = index;
+                                if (fromIndex === toIndex) return;
+                                
+                                const newChapters = [...chapters];
+                                const [moved] = newChapters.splice(fromIndex, 1);
+                                newChapters.splice(toIndex, 0, moved);
+                                handleReorderChapters(newChapters);
+                              }}
+                              className={cn(
+                                "w-full text-right p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors text-sm flex items-center gap-3 group",
+                                !searchQuery && "cursor-move",
+                                selectedChapter?.id === chap.id ? "bg-emerald-50 text-emerald-700 font-bold border-r-4 border-r-emerald-600" : "text-stone-600"
                               )}
+                            >
+                              <div 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  toggleChapterSelection(chap.id);
+                                }}
+                                className={cn(
+                                  "w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer shrink-0",
+                                  selectedChapterIds.has(chap.id) ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300 bg-white"
+                                )}
+                              >
+                                {selectedChapterIds.has(chap.id) && <Check size={10} />}
+                              </div>
+                              <div 
+                                className="flex items-center gap-2 flex-1 min-w-0"
+                                onClick={() => {
+                                  setSelectedChapter(chap);
+                                  setArabicContent(chap.content_arabic || '');
+                                }}
+                              >
+                                <span className="truncate flex-1">{chap.title || `الفصل ${chap.chapter_number}`}</span>
+                                {chap.content_arabic && chap.content_arabic.trim().length > 0 && (
+                                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200 shrink-0" title="مترجم" />
+                                )}
+                              </div>
+                              {!searchQuery && <GripVertical size={14} className="text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
                             </div>
-                            {!searchQuery && <GripVertical size={14} className="text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
-                          </div>
-                        ))}
+                          ))}
                         {filteredChapters.length === 0 && (
                           <div className="p-8 text-center text-stone-400 text-sm">
                             لا توجد نتائج للبحث
@@ -728,8 +894,9 @@ export default function App() {
                       </div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Content Area */}
+                {/* Content Area */}
                   <div className="lg:col-span-9 space-y-6">
                     {selectedChapter && (
                       <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
@@ -989,7 +1156,7 @@ export default function App() {
                       "w-5 h-5 rounded border flex items-center justify-center",
                       selectedPendingIndices.has(idx) ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300"
                     )}>
-                      {selectedPendingIndices.has(idx) && <Save size={12} />}
+                      {selectedPendingIndices.has(idx) && <Check size={12} />}
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
