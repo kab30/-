@@ -21,7 +21,8 @@ import {
   Languages,
   BookOpen,
   Loader2,
-  Check
+  Check,
+  Download
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -48,6 +49,7 @@ export default function App() {
   const [showUploadPreview, setShowUploadPreview] = useState(false);
   const [selectedPendingIndices, setSelectedPendingIndices] = useState<Set<number>>(new Set());
   const [selectedChapterIds, setSelectedChapterIds] = useState<Set<string>>(new Set());
+  const [copiedId, setCopiedId] = useState<string | null>(null);
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
   const [deleteRangeStart, setDeleteRangeStart] = useState('');
@@ -410,7 +412,15 @@ export default function App() {
       alert('خطأ في حفظ الترجمة');
     } else {
       alert('تم حفظ الترجمة بنجاح');
-      setChapters(chapters.map(c => c.id === selectedChapter.id ? { ...c, content_arabic: arabicContent } : c));
+      const updatedChapters = chapters.map(c => c.id === selectedChapter.id ? { ...c, content_arabic: arabicContent } : c);
+      setChapters(updatedChapters);
+      
+      // Move to next untranslated chapter
+      const next = updatedChapters.find(c => !c.content_arabic || c.content_arabic.trim().length === 0);
+      if (next) {
+        setSelectedChapter(next);
+        setArabicContent(next.content_arabic || '');
+      }
     }
   };
 
@@ -453,12 +463,11 @@ export default function App() {
     }
   };
 
-  const copyToClipboard = async (text: string) => {
+  const copyToClipboard = async (text: string, id?: string) => {
     try {
       if (navigator.clipboard && window.isSecureContext) {
         await navigator.clipboard.writeText(text);
       } else {
-        // Fallback for older browsers or non-secure contexts
         const textArea = document.createElement("textarea");
         textArea.value = text;
         textArea.style.position = "fixed";
@@ -470,11 +479,44 @@ export default function App() {
         document.execCommand('copy');
         textArea.remove();
       }
-      alert('تم النسخ إلى الحافظة');
+      
+      if (id) {
+        setCopiedId(id);
+        setTimeout(() => setCopiedId(null), 2000);
+      } else {
+        alert('تم النسخ إلى الحافظة');
+      }
     } catch (err) {
       console.error('Failed to copy: ', err);
       alert('فشل النسخ. يرجى المحاولة مرة أخرى أو النسخ يدوياً.');
     }
+  };
+
+  const handleDownloadTranslated = () => {
+    if (!selectedNovel || chapters.length === 0) return;
+
+    const translatedChapters = chapters
+      .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
+      .sort((a, b) => a.chapter_number - b.chapter_number);
+
+    if (translatedChapters.length === 0) {
+      alert('لا توجد فصول مترجمة لتحميلها');
+      return;
+    }
+
+    const content = translatedChapters
+      .map(c => c.content_arabic)
+      .join('\n\n' + '='.repeat(30) + '\n\n');
+
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedNovel.title}_ترجمة.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   const filteredChapters = chapters.filter(chap => {
@@ -675,6 +717,13 @@ export default function App() {
                         <ChevronRight size={16} />
                       </button>
                     )}
+                    <button 
+                      onClick={handleDownloadTranslated}
+                      className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm"
+                    >
+                      <Download size={16} />
+                      <span>تحميل الترجمة (.txt)</span>
+                    </button>
                   </div>
                   
                   <div className="pt-4 flex gap-4">
@@ -721,6 +770,31 @@ export default function App() {
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
                       </div>
+
+                      {/* Quick Copy Buttons */}
+                      {chapters.filter(c => !c.content_arabic || c.content_arabic.trim().length === 0).length > 0 && (
+                        <div className="grid grid-cols-3 gap-2 mb-4">
+                          {chapters
+                            .filter(c => !c.content_arabic || c.content_arabic.trim().length === 0)
+                            .slice(0, 3)
+                            .map((chap) => (
+                              <button
+                                key={chap.id}
+                                onClick={() => copyToClipboard(`${chap.title}\n\n${chap.content_original}`, chap.id)}
+                                className={cn(
+                                  "py-2 px-1 rounded-xl text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 shadow-sm border",
+                                  copiedId === chap.id 
+                                    ? "bg-emerald-500 border-emerald-500 text-white scale-95" 
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                                )}
+                                title={`نسخ ${chap.title}`}
+                              >
+                                {copiedId === chap.id ? <Check size={14} /> : <Copy size={14} />}
+                                <span className="truncate w-full text-center">فصل {chap.chapter_number}</span>
+                              </button>
+                            ))}
+                        </div>
+                      )}
 
                       {/* Filter Tabs */}
                       <div className="flex gap-1 mb-4 bg-stone-100 p-1 rounded-xl">
