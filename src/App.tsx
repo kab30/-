@@ -737,7 +737,7 @@ export default function App() {
                           <h3 className="text-xl font-bold text-stone-800">{selectedChapter.title}</h3>
                           <div className="flex gap-2">
                             <button 
-                              onClick={() => copyToClipboard(selectedChapter.content_original)}
+                              onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
                               className="p-2 bg-white border border-stone-200 rounded-lg text-stone-600 hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
                               title="نسخ النص الأصلي"
                             >
@@ -745,7 +745,7 @@ export default function App() {
                               <span className="text-xs font-bold hidden sm:inline">نسخ الأصلي</span>
                             </button>
                             <button 
-                              onClick={() => copyToClipboard(arabicContent)}
+                              onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
                               className="p-2 bg-white border border-stone-200 rounded-lg text-stone-600 hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
                               title="نسخ الترجمة"
                             >
@@ -771,7 +771,7 @@ export default function App() {
                                 النص الأصلي
                               </span>
                               <button 
-                                onClick={() => copyToClipboard(selectedChapter.content_original)}
+                                onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
                                 className="p-1.5 text-stone-400 hover:text-emerald-600 transition-colors"
                                 title="نسخ النص الأصلي"
                               >
@@ -791,7 +791,7 @@ export default function App() {
                                 الترجمة العربية
                               </span>
                               <button 
-                                onClick={() => copyToClipboard(arabicContent)}
+                                onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
                                 className="p-1.5 text-stone-400 hover:text-emerald-600 transition-colors"
                                 title="نسخ الترجمة"
                               >
