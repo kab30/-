@@ -8,6 +8,8 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export interface Novel {
   id: string;
   title: string;
+  original_title?: string;
+  source_url?: string;
   cover_url: string;
   created_at: string;
 }

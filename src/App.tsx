@@ -42,9 +42,12 @@ export default function App() {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [chapterFilter, setChapterFilter] = useState<'all' | 'translated' | 'untranslated'>('all');
 
   // Form states
   const [newNovelTitle, setNewNovelTitle] = useState('');
+  const [newNovelOriginalTitle, setNewNovelOriginalTitle] = useState('');
+  const [newNovelSourceUrl, setNewNovelSourceUrl] = useState('');
   const [newNovelCover, setNewNovelCover] = useState('');
 
   useEffect(() => {
@@ -95,7 +98,12 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('novels')
-      .insert([{ title: newNovelTitle, cover_url: newNovelCover || 'https://picsum.photos/seed/novel/400/600' }])
+      .insert([{ 
+        title: newNovelTitle, 
+        original_title: newNovelOriginalTitle,
+        source_url: newNovelSourceUrl,
+        cover_url: newNovelCover || 'https://picsum.photos/seed/novel/400/600' 
+      }])
       .select();
 
     if (error) {
@@ -104,6 +112,8 @@ export default function App() {
       setNovels([data[0], ...novels]);
       setIsAddingNovel(false);
       setNewNovelTitle('');
+      setNewNovelOriginalTitle('');
+      setNewNovelSourceUrl('');
       setNewNovelCover('');
     }
   };
@@ -258,10 +268,26 @@ export default function App() {
     alert('تم النسخ إلى الحافظة');
   };
 
-  const filteredChapters = chapters.filter(chap => 
-    chap.content_original.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (chap.title && chap.title.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredChapters = chapters.filter(chap => {
+    const matchesSearch = chap.content_original.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (chap.title && chap.title.toLowerCase().includes(searchQuery.toLowerCase()));
+    
+    const isTranslated = !!(chap.content_arabic && chap.content_arabic.trim().length > 0);
+    
+    if (chapterFilter === 'translated') return matchesSearch && isTranslated;
+    if (chapterFilter === 'untranslated') return matchesSearch && !isTranslated;
+    return matchesSearch;
+  });
+
+  const translatedCount = chapters.filter(c => c.content_arabic && c.content_arabic.trim().length > 0).length;
+  const nextUntranslated = chapters.find(c => !c.content_arabic || c.content_arabic.trim().length === 0);
+
+  const handleGoToNextUntranslated = () => {
+    if (nextUntranslated) {
+      setSelectedChapter(nextUntranslated);
+      setArabicContent(nextUntranslated.content_arabic || '');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-stone-50 font-sans text-stone-900 pb-20">
@@ -393,24 +419,53 @@ export default function App() {
                         </button>
                       </div>
                     ) : (
-                      <>
-                        <h2 className="text-3xl font-black text-stone-900">{selectedNovel.title}</h2>
-                        <button 
-                          onClick={() => {
-                            setEditedTitle(selectedNovel.title);
-                            setIsEditingTitle(true);
-                          }}
-                          className="p-2 text-stone-400 hover:text-emerald-600 transition-colors"
-                        >
-                          <Edit size={20} />
-                        </button>
-                      </>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-3">
+                          <h2 className="text-3xl font-black text-stone-900">{selectedNovel.title}</h2>
+                          <button 
+                            onClick={() => {
+                              setEditedTitle(selectedNovel.title);
+                              setIsEditingTitle(true);
+                            }}
+                            className="p-2 text-stone-400 hover:text-emerald-600 transition-colors"
+                          >
+                            <Edit size={20} />
+                          </button>
+                        </div>
+                        {selectedNovel.original_title && (
+                          <p className="text-stone-500 font-medium">{selectedNovel.original_title}</p>
+                        )}
+                        {selectedNovel.source_url && (
+                          <a 
+                            href={selectedNovel.source_url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-emerald-600 text-sm hover:underline flex items-center gap-1"
+                          >
+                            <ImageIcon size={14} />
+                            رابط الرواية الأصلي
+                          </a>
+                        )}
+                      </div>
                     )}
                   </div>
                   <div className="flex flex-wrap gap-3">
                     <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600">
                       عدد الفصول: {chapters.length}
                     </div>
+                    <div className="bg-emerald-100 px-4 py-2 rounded-lg text-sm font-medium text-emerald-700 flex items-center gap-2">
+                      <span>المترجمة: {translatedCount}</span>
+                      <span className="text-xs opacity-60">({Math.round((translatedCount / (chapters.length || 1)) * 100)}%)</span>
+                    </div>
+                    {nextUntranslated && (
+                      <button 
+                        onClick={handleGoToNextUntranslated}
+                        className="bg-stone-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center gap-2"
+                      >
+                        <span>الفصل التالي للترجمة: {nextUntranslated.chapter_number}</span>
+                        <ChevronRight size={16} />
+                      </button>
+                    )}
                   </div>
                   
                   <div className="pt-4 flex gap-4">
@@ -456,6 +511,31 @@ export default function App() {
                           value={searchQuery}
                           onChange={(e) => setSearchQuery(e.target.value)}
                         />
+                      </div>
+
+                      {/* Filter Tabs */}
+                      <div className="flex gap-1 mb-4 bg-stone-100 p-1 rounded-xl">
+                        <button 
+                          onClick={() => setChapterFilter('all')}
+                          className={cn(
+                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                            chapterFilter === 'all' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                          )}
+                        >الكل</button>
+                        <button 
+                          onClick={() => setChapterFilter('translated')}
+                          className={cn(
+                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                            chapterFilter === 'translated' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                          )}
+                        >المترجمة</button>
+                        <button 
+                          onClick={() => setChapterFilter('untranslated')}
+                          className={cn(
+                            "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
+                            chapterFilter === 'untranslated' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                          )}
+                        >غير المترجمة</button>
                       </div>
 
                       <select 
@@ -514,7 +594,12 @@ export default function App() {
                               setArabicContent(chap.content_arabic || '');
                             }}
                           >
-                            <span className="flex-1">{chap.title || `الفصل ${chap.chapter_number}`}</span>
+                            <div className="flex items-center gap-2 flex-1">
+                              <span className="flex-1">{chap.title || `الفصل ${chap.chapter_number}`}</span>
+                              {chap.content_arabic && chap.content_arabic.trim().length > 0 && (
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200" title="مترجم" />
+                              )}
+                            </div>
                             {!searchQuery && <GripVertical size={14} className="text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity" />}
                           </div>
                         ))}
@@ -629,6 +714,26 @@ export default function App() {
                     placeholder="مثلاً: رواية ملك الآلهة"
                     value={newNovelTitle}
                     onChange={(e) => setNewNovelTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-stone-600">الاسم الأصلي</label>
+                  <input 
+                    type="text" 
+                    className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="الاسم باللغة الأصلية"
+                    value={newNovelOriginalTitle}
+                    onChange={(e) => setNewNovelOriginalTitle(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-stone-600">رابط الرواية</label>
+                  <input 
+                    type="url" 
+                    className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                    placeholder="https://..."
+                    value={newNovelSourceUrl}
+                    onChange={(e) => setNewNovelSourceUrl(e.target.value)}
                   />
                 </div>
                 <div className="space-y-2">
