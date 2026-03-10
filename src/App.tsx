@@ -32,6 +32,7 @@ export default function App() {
 
   // Version Check Logic
   useEffect(() => {
+    document.title = 'مستودع الروايات';
     const savedVersion = localStorage.getItem('app_version');
     if (savedVersion && savedVersion !== APP_VERSION) {
       console.log('Version mismatch detected. Refreshing...');
