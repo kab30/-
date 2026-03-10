@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
+import { HashRouter, Routes, Route, useNavigate, useParams } from 'react-router-dom';
 import { supabase, type Novel, type Chapter } from './supabase';
 import { 
   Plus, 
@@ -19,9 +19,9 @@ import { NovelDetail } from './components/NovelDetail';
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <HashRouter>
       <AppContent />
-    </BrowserRouter>
+    </HashRouter>
   );
 }
 
