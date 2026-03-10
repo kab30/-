@@ -12,12 +12,100 @@ import {
   ChevronLeft, 
   BookOpen, 
   Loader2,
+  Lock,
+  LogIn,
+  LogOut,
+  RefreshCw
 } from 'lucide-react';
-import { AnimatePresence } from 'motion/react';
+import { AnimatePresence, motion } from 'motion/react';
 import { NovelList } from './components/NovelList';
 import { NovelDetail } from './components/NovelDetail';
 
+const APP_VERSION = '1.0.1';
+
 export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('app_authenticated') === 'true';
+  });
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState(false);
+
+  // Version Check Logic
+  useEffect(() => {
+    const savedVersion = localStorage.getItem('app_version');
+    if (savedVersion && savedVersion !== APP_VERSION) {
+      console.log('Version mismatch detected. Refreshing...');
+      localStorage.setItem('app_version', APP_VERSION);
+      // Hard reload to bypass cache
+      window.location.href = window.location.origin + window.location.pathname + '?v=' + APP_VERSION + window.location.hash;
+    } else {
+      localStorage.setItem('app_version', APP_VERSION);
+    }
+  }, []);
+
+  const handleLogin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (password === '041994') {
+      setIsAuthenticated(true);
+      localStorage.setItem('app_authenticated', 'true');
+      setError(false);
+    } else {
+      setError(true);
+      setPassword('');
+    }
+  };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center p-4 font-sans">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-md bg-white rounded-3xl shadow-2xl border border-stone-200 overflow-hidden"
+        >
+          <div className="p-8 text-center space-y-6">
+            <div className="w-20 h-20 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-emerald-200">
+              <Lock size={40} />
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-2xl font-black text-stone-900">مستودع الروايات</h1>
+              <p className="text-stone-500 font-medium">يرجى إدخال كلمة السر للوصول للمحتوى</p>
+            </div>
+            
+            <form onSubmit={handleLogin} className="space-y-4">
+              <div className="relative">
+                <input 
+                  type="password"
+                  className={`w-full p-4 bg-stone-50 border ${error ? 'border-red-500' : 'border-stone-200'} rounded-2xl text-center text-xl tracking-[0.5em] focus:ring-2 focus:ring-emerald-500 outline-none transition-all`}
+                  placeholder="••••••"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setError(false);
+                  }}
+                  autoFocus
+                />
+                {error && (
+                  <p className="text-red-500 text-sm font-bold mt-2">كلمة السر غير صحيحة!</p>
+                )}
+              </div>
+              <button 
+                type="submit"
+                className="w-full bg-emerald-600 text-white py-4 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+              >
+                <LogIn size={20} />
+                <span>دخول</span>
+              </button>
+            </form>
+          </div>
+          <div className="bg-stone-50 p-4 text-center border-t border-stone-100">
+            <p className="text-xs text-stone-400 font-medium">جميع الحقوق محفوظة © {new Date().getFullYear()}</p>
+          </div>
+        </motion.div>
+      </div>
+    );
+  }
+
   return (
     <HashRouter>
       <AppContent />
@@ -107,26 +195,43 @@ function AppContent() {
             <h1 className="text-xl font-bold tracking-tight">مستودع الروايات</h1>
           </div>
           
-          <Routes>
-            <Route path="/" element={
-              <button 
-                onClick={() => setIsAddingNovel(true)}
-                className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-100"
-              >
-                <Plus size={20} />
-                <span>إضافة رواية</span>
-              </button>
-            } />
-            <Route path="/novel/:id" element={
-              <button 
-                onClick={() => navigate('/')}
-                className="flex items-center gap-2 text-stone-500 hover:text-stone-800 transition-colors"
-              >
-                <span>العودة للرئيسية</span>
-                <ChevronLeft size={20} />
-              </button>
-            } />
-          </Routes>
+          <div className="flex items-center gap-4">
+            <Routes>
+              <Route path="/" element={
+                <button 
+                  onClick={() => setIsAddingNovel(true)}
+                  className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-100"
+                >
+                  <Plus size={20} />
+                  <span>إضافة رواية</span>
+                </button>
+              } />
+              <Route path="/novel/:id" element={
+                <button 
+                  onClick={() => navigate('/')}
+                  className="flex items-center gap-2 text-stone-500 hover:text-stone-800 transition-colors"
+                >
+                  <span>العودة للرئيسية</span>
+                  <ChevronLeft size={20} />
+                </button>
+              } />
+            </Routes>
+
+            <div className="h-6 w-[1px] bg-stone-200 mx-2" />
+
+            <button 
+              onClick={() => {
+                if (confirm('هل تريد تسجيل الخروج؟')) {
+                  localStorage.removeItem('app_authenticated');
+                  window.location.reload();
+                }
+              }}
+              className="p-2 text-stone-400 hover:text-red-500 transition-colors"
+              title="تسجيل الخروج"
+            >
+              <LogOut size={20} />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -214,6 +319,31 @@ function AppContent() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Footer Version Info */}
+      <footer className="max-w-6xl mx-auto px-4 py-8 border-t border-stone-200 flex flex-col md:flex-row items-center justify-between gap-4 text-stone-400 text-sm font-medium">
+        <div className="flex items-center gap-2">
+          <BookOpen size={16} />
+          <span>مستودع الروايات © {new Date().getFullYear()}</span>
+        </div>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1 bg-stone-100 px-3 py-1 rounded-full text-xs">
+            <RefreshCw size={12} className="animate-spin-slow" />
+            <span>الإصدار: {APP_VERSION}</span>
+          </div>
+          <button 
+            onClick={() => {
+              if (confirm('هل تريد مسح الكاش وإعادة تحميل الموقع؟')) {
+                localStorage.clear();
+                window.location.reload();
+              }
+            }}
+            className="hover:text-stone-600 transition-colors"
+          >
+            مسح الكاش يدوياً
+          </button>
+        </div>
+      </footer>
     </div>
   );
 }
