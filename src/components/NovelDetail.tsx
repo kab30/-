@@ -17,11 +17,18 @@ import {
   Loader2,
   Check,
   Download,
-  Plus
+  Plus,
+  Wifi,
+  WifiOff,
+  CloudUpload,
+  FileSearch,
+  AlertCircle,
+  CheckCircle2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import ePub from 'epubjs';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -37,8 +44,16 @@ export const NovelDetail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [arabicContent, setArabicContent] = useState('');
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [pendingSync, setPendingSync] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('pending_sync');
+    return saved ? JSON.parse(saved) : {};
+  });
+  const [isSyncing, setIsSyncing] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState('');
+  const [isEditingTotalChapters, setIsEditingTotalChapters] = useState(false);
+  const [editedTotalChapters, setEditedTotalChapters] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [chapterFilter, setChapterFilter] = useState<'all' | 'translated' | 'untranslated'>('all');
   const [pendingChapters, setPendingChapters] = useState<any[]>([]);
@@ -51,6 +66,8 @@ export const NovelDetail: React.FC = () => {
   const [downloadRangeStart, setDownloadRangeStart] = useState('');
   const [downloadRangeEnd, setDownloadRangeEnd] = useState('');
   const [showDownloadModal, setShowDownloadModal] = useState(false);
+  const [showCheckModal, setShowCheckModal] = useState(false);
+  const [checkResults, setCheckResults] = useState<{ missing: number[], max: number } | null>(null);
   const [deleteRangeStart, setDeleteRangeStart] = useState('');
   const [deleteRangeEnd, setDeleteRangeEnd] = useState('');
 
@@ -59,7 +76,53 @@ export const NovelDetail: React.FC = () => {
       fetchNovel(id);
       fetchChapters(id);
     }
+
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
   }, [id]);
+
+  useEffect(() => {
+    localStorage.setItem('pending_sync', JSON.stringify(pendingSync));
+  }, [pendingSync]);
+
+  const syncPending = async () => {
+    if (!isOnline || Object.keys(pendingSync).length === 0 || isSyncing) return;
+    
+    setIsSyncing(true);
+    const newPending = { ...pendingSync };
+    
+    try {
+      for (const [chapterId, content] of Object.entries(pendingSync)) {
+        const { error } = await supabase
+          .from('chapters')
+          .update({ content_arabic: content })
+          .eq('id', chapterId);
+        
+        if (!error) {
+          delete newPending[chapterId];
+        }
+      }
+      setPendingSync(newPending);
+    } catch (err) {
+      console.error('Sync error:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOnline) {
+      syncPending();
+    }
+  }, [isOnline]);
 
   const fetchNovel = async (novelId: string) => {
     const { data, error } = await supabase
@@ -74,6 +137,7 @@ export const NovelDetail: React.FC = () => {
     } else {
       setNovel(data);
       setEditedTitle(data.title);
+      setEditedTotalChapters(data.total_chapters?.toString() || '');
     }
   };
 
@@ -294,11 +358,74 @@ export const NovelDetail: React.FC = () => {
     const existingNumbers = new Set(allExistingChapters.map(c => c.chapter_number));
     const maxExistingNum = allExistingChapters.reduce((max, c) => Math.max(max, c.chapter_number), 0);
 
+    const isEpub = file.name.toLowerCase().endsWith('.epub');
+
+    if (isEpub) {
+      try {
+        const book = ePub(await file.arrayBuffer());
+        const spine = await book.loaded.spine;
+        const parsedChapters: any[] = [];
+        let currentMax = maxExistingNum;
+
+        for (let i = 0; i < spine.length; i++) {
+          const item = (spine as any).get(i);
+          if (!item) continue;
+          
+          const html = await item.load(book.load.bind(book));
+          const doc = new DOMParser().parseFromString(html, 'text/html');
+          const textContent = doc.body.textContent || "";
+          
+          if (textContent.trim().length < 50) continue;
+
+          const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/gi;
+          const match = chapterRegex.exec(textContent);
+          
+          let chapterNum: number;
+          if (match) {
+            chapterNum = parseInt(match[1] || match[2] || match[3] || match[4]);
+          } else {
+            chapterNum = currentMax + 1;
+          }
+          
+          if (!isNaN(chapterNum)) {
+            currentMax = Math.max(currentMax, chapterNum);
+            
+            const lines = textContent.trim().split('\n');
+            const title = lines[0].trim().substring(0, 100);
+            const content = lines.slice(1).join('\n').trim();
+
+            parsedChapters.push({
+              novel_id: novel.id,
+              chapter_number: chapterNum,
+              title: title || `الفصل ${chapterNum}`,
+              content_original: content || textContent.trim(),
+              isDuplicate: existingNumbers.has(chapterNum)
+            });
+          }
+        }
+        
+        setPendingChapters(parsedChapters);
+        setSelectedPendingIndices(new Set(
+          parsedChapters
+            .map((c, idx) => c.isDuplicate ? -1 : idx)
+            .filter(idx => idx !== -1)
+        ));
+        setShowUploadPreview(true);
+        setIsUploading(false);
+        return;
+      } catch (err) {
+        console.error('Error parsing EPUB:', err);
+        alert('حدث خطأ أثناء قراءة ملف EPUB');
+        setIsUploading(false);
+        return;
+      }
+    }
+
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target?.result as string;
       
-      const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+))/gi;
+      const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/gi;
       const markers = Array.from(text.matchAll(chapterRegex));
       
       const parsedChapters: any[] = [];
@@ -315,7 +442,7 @@ export const NovelDetail: React.FC = () => {
       } else {
         for (let i = 0; i < markers.length; i++) {
           const match = markers[i];
-          const extractedNum = parseInt(match[1] || match[2] || match[3]);
+          const extractedNum = parseInt(match[1] || match[2] || match[3] || match[4]);
           const chapterNum = isNaN(extractedNum) ? (maxExistingNum + i + 1) : extractedNum;
           
           const start = match.index!;
@@ -351,6 +478,25 @@ export const NovelDetail: React.FC = () => {
   const handleSaveTranslation = async () => {
     if (!selectedChapter) return;
 
+    if (!isOnline) {
+      setPendingSync(prev => ({
+        ...prev,
+        [selectedChapter.id]: arabicContent
+      }));
+      
+      const updatedChapters = chapters.map(c => c.id === selectedChapter.id ? { ...c, content_arabic: arabicContent } : c);
+      setChapters(updatedChapters);
+      
+      alert('تم الحفظ محلياً (أنت غير متصل). سيتم الرفع تلقائياً عند عودة الإنترنت.');
+      
+      const next = updatedChapters.find(c => !c.content_arabic || c.content_arabic.trim().length === 0);
+      if (next) {
+        setSelectedChapter(next);
+        setArabicContent(next.content_arabic || '');
+      }
+      return;
+    }
+
     const { error } = await supabase
       .from('chapters')
       .update({ content_arabic: arabicContent })
@@ -384,6 +530,27 @@ export const NovelDetail: React.FC = () => {
     } else {
       setNovel({ ...novel, title: editedTitle });
       setIsEditingTitle(false);
+    }
+  };
+
+  const handleUpdateTotalChapters = async () => {
+    if (!novel) return;
+    const total = parseInt(editedTotalChapters);
+    if (isNaN(total) && editedTotalChapters !== '') {
+      alert('يرجى إدخال رقم صحيح');
+      return;
+    }
+
+    const { error } = await supabase
+      .from('novels')
+      .update({ total_chapters: isNaN(total) ? null : total })
+      .eq('id', novel.id);
+
+    if (error) {
+      alert('خطأ في تحديث عدد الفصول');
+    } else {
+      setNovel({ ...novel, total_chapters: isNaN(total) ? undefined : total });
+      setIsEditingTotalChapters(false);
     }
   };
 
@@ -470,6 +637,25 @@ export const NovelDetail: React.FC = () => {
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     setShowDownloadModal(false);
+  };
+
+  const checkMissingChapters = () => {
+    if (chapters.length === 0 && !novel?.total_chapters) return;
+
+    const numbers = chapters.map(c => c.chapter_number).sort((a, b) => a - b);
+    const min = 1;
+    const max = novel?.total_chapters || Math.max(...numbers);
+    const missing = [];
+
+    const numSet = new Set(numbers);
+    for (let i = min; i <= max; i++) {
+      if (!numSet.has(i)) {
+        missing.push(i);
+      }
+    }
+
+    setCheckResults({ missing, max });
+    setShowCheckModal(true);
   };
 
   const filteredChapters = chapters.filter(chap => {
@@ -574,12 +760,44 @@ export const NovelDetail: React.FC = () => {
             )}
           </div>
           <div className="flex flex-wrap gap-3">
-            <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600">
-              عدد الفصول: {chapters.length}
+            <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600 flex items-center gap-2">
+              <span>الفصول المخزنة: {chapters.length}</span>
             </div>
+            
+            {isEditingTotalChapters ? (
+              <div className="flex items-center gap-2 bg-stone-100 px-2 py-1 rounded-lg">
+                <input 
+                  type="number"
+                  className="w-20 bg-white border border-stone-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
+                  value={editedTotalChapters}
+                  onChange={(e) => setEditedTotalChapters(e.target.value)}
+                  placeholder="الإجمالي"
+                  autoFocus
+                />
+                <button onClick={handleUpdateTotalChapters} className="text-emerald-600 hover:text-emerald-700">
+                  <Check size={16} />
+                </button>
+                <button onClick={() => setIsEditingTotalChapters(false)} className="text-stone-400 hover:text-stone-600">
+                  <Plus size={16} className="rotate-45" />
+                </button>
+              </div>
+            ) : (
+              <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600 flex items-center gap-2">
+                <span>إجمالي الفصول: {novel.total_chapters || 'غير محدد'}</span>
+                <button 
+                  onClick={() => {
+                    setEditedTotalChapters(novel.total_chapters?.toString() || '');
+                    setIsEditingTotalChapters(true);
+                  }}
+                  className="text-stone-400 hover:text-emerald-600 transition-colors"
+                >
+                  <Edit size={14} />
+                </button>
+              </div>
+            )}
             <div className="bg-emerald-100 px-4 py-2 rounded-lg text-sm font-medium text-emerald-700 flex items-center gap-2">
               <span>المترجمة: {translatedCount}</span>
-              <span className="text-xs opacity-60">({Math.round((translatedCount / (chapters.length || 1)) * 100)}%)</span>
+              <span className="text-xs opacity-60">({Math.round((translatedCount / (novel.total_chapters || chapters.length || 1)) * 100)}%)</span>
             </div>
             {nextUntranslated && (
               <button 
@@ -601,15 +819,23 @@ export const NovelDetail: React.FC = () => {
               <Download size={16} />
               <span>تحميل الترجمة (.txt)</span>
             </button>
+            <button 
+              onClick={checkMissingChapters}
+              className="bg-stone-100 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors flex items-center gap-2 border border-stone-200"
+              title="فحص الفصول المفقودة"
+            >
+              <FileSearch size={16} />
+              <span>فحص النقص</span>
+            </button>
           </div>
           
           <div className="pt-4 flex gap-4">
             <label className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 transition-colors shadow-lg">
               <Upload size={20} />
-              <span>رفع ملف الرواية (TXT)</span>
+              <span>رفع ملف الرواية (TXT / EPUB)</span>
               <input 
                 type="file" 
-                accept=".txt" 
+                accept=".txt,.epub" 
                 className="hidden" 
                 onChange={handleFileUpload}
                 disabled={isUploading}
@@ -872,13 +1098,35 @@ export const NovelDetail: React.FC = () => {
                     </button>
                     <button 
                       onClick={handleSaveTranslation}
-                      className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 transition-colors shadow-sm"
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-lg transition-colors shadow-sm",
+                        !isOnline ? "bg-amber-600 hover:bg-amber-700 text-white" : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      )}
                     >
-                      <Save size={18} />
-                      <span className="hidden sm:inline">حفظ الترجمة</span>
+                      {isSyncing ? <Loader2 className="animate-spin" size={18} /> : (!isOnline ? <CloudUpload size={18} /> : <Save size={18} />)}
+                      <span className="hidden sm:inline">{!isOnline ? 'حفظ محلي' : 'حفظ الترجمة'}</span>
                     </button>
                   </div>
                 </div>
+
+                {!isOnline && (
+                  <div className="bg-amber-50 px-6 py-2 border-b border-amber-100 flex items-center gap-2 text-amber-700 text-xs font-bold">
+                    <WifiOff size={14} />
+                    <span>أنت تعمل بدون إنترنت. سيتم حفظ التغييرات محلياً ومزامنتها لاحقاً.</span>
+                  </div>
+                )}
+
+                {Object.keys(pendingSync).length > 0 && isOnline && (
+                  <div className="bg-emerald-50 px-6 py-2 border-b border-emerald-100 flex items-center justify-between text-emerald-700 text-xs font-bold">
+                    <div className="flex items-center gap-2">
+                      <CloudUpload size={14} />
+                      <span>لديك {Object.keys(pendingSync).length} تعديلات بانتظار المزامنة.</span>
+                    </div>
+                    <button onClick={syncPending} disabled={isSyncing} className="underline hover:no-underline">
+                      {isSyncing ? 'جاري المزامنة...' : 'مزامنة الآن'}
+                    </button>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-stone-100">
                   {/* Original Text */}
@@ -934,6 +1182,72 @@ export const NovelDetail: React.FC = () => {
           <p className="text-lg">لا توجد فصول لهذه الرواية بعد. قم برفع ملف TXT للبدء.</p>
         </div>
       )}
+
+      {/* Check Missing Chapters Modal */}
+      <AnimatePresence>
+        {showCheckModal && checkResults && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCheckModal(false)}
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                <h3 className="text-xl font-bold">نتائج فحص الفصول</h3>
+                <button onClick={() => setShowCheckModal(false)} className="text-stone-400 hover:text-stone-600">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                {checkResults.missing.length === 0 ? (
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
+                      <CheckCircle2 size={32} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-stone-800">التسلسل مكتمل!</h4>
+                      <p className="text-sm text-stone-500">لا توجد فصول مفقودة في التسلسل من 1 إلى {checkResults.max}.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-amber-600">
+                      <AlertCircle size={24} />
+                      <h4 className="text-lg font-bold">تم العثور على نقص</h4>
+                    </div>
+                    <p className="text-sm text-stone-600">
+                      هناك <span className="font-bold text-stone-900">{checkResults.missing.length}</span> فصل مفقود في التسلسل:
+                    </p>
+                    <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 max-h-40 overflow-y-auto">
+                      <p className="font-mono text-sm text-stone-600 leading-relaxed">
+                        {checkResults.missing.join(', ')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-stone-400 italic">
+                      * الفحص يعتمد على أرقام الفصول من 1 إلى {checkResults.max}.
+                    </p>
+                  </div>
+                )}
+
+                <button 
+                  onClick={() => setShowCheckModal(false)}
+                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-stone-800 transition-all"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Download Range Modal */}
       <AnimatePresence>

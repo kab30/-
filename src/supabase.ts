@@ -11,6 +11,7 @@ export interface Novel {
   original_title?: string;
   source_url?: string;
   cover_url: string;
+  total_chapters?: number;
   created_at: string;
 }
 
