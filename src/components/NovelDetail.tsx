@@ -23,7 +23,8 @@ import {
   CloudUpload,
   FileSearch,
   AlertCircle,
-  CheckCircle2
+  CheckCircle2,
+  StickyNote
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -54,6 +55,8 @@ export const NovelDetail: React.FC = () => {
   const [editedTitle, setEditedTitle] = useState('');
   const [isEditingTotalChapters, setIsEditingTotalChapters] = useState(false);
   const [editedTotalChapters, setEditedTotalChapters] = useState('');
+  const [isEditingNotes, setIsEditingNotes] = useState(false);
+  const [editedNotes, setEditedNotes] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [chapterFilter, setChapterFilter] = useState<'all' | 'translated' | 'untranslated'>('all');
   const [pendingChapters, setPendingChapters] = useState<any[]>([]);
@@ -138,6 +141,7 @@ export const NovelDetail: React.FC = () => {
       setNovel(data);
       setEditedTitle(data.title);
       setEditedTotalChapters(data.total_chapters?.toString() || '');
+      setEditedNotes(data.notes || '');
     }
   };
 
@@ -554,6 +558,22 @@ export const NovelDetail: React.FC = () => {
     }
   };
 
+  const handleUpdateNotes = async () => {
+    if (!novel) return;
+
+    const { error } = await supabase
+      .from('novels')
+      .update({ notes: editedNotes })
+      .eq('id', novel.id);
+
+    if (error) {
+      alert('خطأ في تحديث الملاحظات');
+    } else {
+      setNovel({ ...novel, notes: editedNotes });
+      setIsEditingNotes(false);
+    }
+  };
+
   const handleReorderChapters = async (newOrder: Chapter[]) => {
     const updatedChapters = newOrder.map((chap, index) => ({
       ...chap,
@@ -759,7 +779,58 @@ export const NovelDetail: React.FC = () => {
               </div>
             )}
           </div>
-          <div className="flex flex-wrap gap-3">
+
+          {/* Notes Section */}
+          <div className="mt-6 bg-stone-50 rounded-xl p-4 border border-stone-200">
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2 text-stone-700 font-bold">
+                <StickyNote size={18} className="text-emerald-600" />
+                <span>ملاحظات الرواية</span>
+              </div>
+              {!isEditingNotes && (
+                <button 
+                  onClick={() => setIsEditingNotes(true)}
+                  className="text-stone-400 hover:text-emerald-600 transition-colors"
+                >
+                  <Edit size={16} />
+                </button>
+              )}
+            </div>
+            
+            {isEditingNotes ? (
+              <div className="space-y-3">
+                <textarea
+                  className="w-full bg-white border border-stone-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
+                  value={editedNotes}
+                  onChange={(e) => setEditedNotes(e.target.value)}
+                  placeholder="أضف ملاحظاتك هنا..."
+                />
+                <div className="flex justify-end gap-2">
+                  <button 
+                    onClick={() => setIsEditingNotes(false)}
+                    className="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-700"
+                  >
+                    إلغاء
+                  </button>
+                  <button 
+                    onClick={handleUpdateNotes}
+                    className="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                  >
+                    <Check size={16} />
+                    <span>حفظ الملاحظات</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-stone-600 text-sm whitespace-pre-wrap leading-relaxed">
+                {novel.notes ? novel.notes : (
+                  <span className="text-stone-400 italic">لا توجد ملاحظات لهذه الرواية بعد.</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="flex flex-wrap gap-3 mt-6">
             <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600 flex items-center gap-2">
               <span>الفصول المخزنة: {chapters.length}</span>
             </div>
