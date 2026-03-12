@@ -16,14 +16,16 @@ import {
   LogIn,
   LogOut,
   RefreshCw,
-  Database
+  Database,
+  WifiOff
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NovelList } from './components/NovelList';
 import { NovelDetail } from './components/NovelDetail';
 import { BackupManager } from './components/BackupManager';
+import pkg from '../package.json';
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = pkg.version;
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
@@ -35,15 +37,6 @@ export default function App() {
   // Version Check Logic
   useEffect(() => {
     document.title = 'مستودع الروايات';
-    const savedVersion = localStorage.getItem('app_version');
-    if (savedVersion && savedVersion !== APP_VERSION) {
-      console.log('Version mismatch detected. Refreshing...');
-      localStorage.setItem('app_version', APP_VERSION);
-      // Hard reload to bypass cache
-      window.location.href = window.location.origin + window.location.pathname + '?v=' + APP_VERSION + window.location.hash;
-    } else {
-      localStorage.setItem('app_version', APP_VERSION);
-    }
   }, []);
 
   const handleLogin = (e: React.FormEvent) => {
@@ -121,6 +114,17 @@ function AppContent() {
   const [novels, setNovels] = useState<Novel[]>([]);
   const [isAddingNovel, setIsAddingNovel] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+
+  useEffect(() => {
+    const handleStatus = () => setIsOnline(navigator.onLine);
+    window.addEventListener('online', handleStatus);
+    window.addEventListener('offline', handleStatus);
+    return () => {
+      window.removeEventListener('online', handleStatus);
+      window.removeEventListener('offline', handleStatus);
+    };
+  }, []);
 
   // Form states
   const [newNovelTitle, setNewNovelTitle] = useState('');
@@ -196,6 +200,12 @@ function AppContent() {
               <BookOpen size={24} />
             </div>
             <h1 className="text-xl font-bold tracking-tight">مستودع الروايات</h1>
+            {!isOnline && (
+              <div className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs font-bold animate-pulse">
+                <WifiOff size={12} />
+                <span>أنت تعمل بدون إنترنت</span>
+              </div>
+            )}
           </div>
           
           <div className="flex items-center gap-4">
