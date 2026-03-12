@@ -15,11 +15,13 @@ import {
   Lock,
   LogIn,
   LogOut,
-  RefreshCw
+  RefreshCw,
+  Database
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NovelList } from './components/NovelList';
 import { NovelDetail } from './components/NovelDetail';
+import { BackupManager } from './components/BackupManager';
 
 const APP_VERSION = '1.0.1';
 
@@ -221,6 +223,14 @@ function AppContent() {
             <div className="h-6 w-[1px] bg-stone-200 mx-2" />
 
             <button 
+              onClick={() => navigate('/backup')}
+              className="p-2 text-stone-400 hover:text-emerald-600 transition-colors"
+              title="النسخ الاحتياطي"
+            >
+              <Database size={20} />
+            </button>
+
+            <button 
               onClick={() => {
                 if (confirm('هل تريد تسجيل الخروج؟')) {
                   localStorage.removeItem('app_authenticated');
@@ -248,6 +258,7 @@ function AppContent() {
               />
             } />
             <Route path="/novel/:id" element={<NovelDetail />} />
+            <Route path="/backup" element={<BackupManager />} />
           </Routes>
         </AnimatePresence>
       </main>
