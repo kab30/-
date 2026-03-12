@@ -48,6 +48,9 @@ export const NovelDetail: React.FC = () => {
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [rangeStart, setRangeStart] = useState('');
   const [rangeEnd, setRangeEnd] = useState('');
+  const [downloadRangeStart, setDownloadRangeStart] = useState('');
+  const [downloadRangeEnd, setDownloadRangeEnd] = useState('');
+  const [showDownloadModal, setShowDownloadModal] = useState(false);
   const [deleteRangeStart, setDeleteRangeStart] = useState('');
   const [deleteRangeEnd, setDeleteRangeEnd] = useState('');
 
@@ -435,28 +438,38 @@ export const NovelDetail: React.FC = () => {
   const handleDownloadTranslated = () => {
     if (!novel || chapters.length === 0) return;
 
-    const translatedChapters = chapters
-      .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
-      .sort((a, b) => a.chapter_number - b.chapter_number);
+    const start = parseInt(downloadRangeStart);
+    const end = parseInt(downloadRangeEnd);
+
+    let translatedChapters = chapters
+      .filter(c => c.content_arabic && c.content_arabic.trim().length > 0);
+
+    if (!isNaN(start) && !isNaN(end)) {
+      translatedChapters = translatedChapters.filter(c => c.chapter_number >= start && c.chapter_number <= end);
+    }
+
+    translatedChapters.sort((a, b) => a.chapter_number - b.chapter_number);
 
     if (translatedChapters.length === 0) {
-      alert('لا توجد فصول مترجمة لتحميلها');
+      alert('لا توجد فصول مترجمة في هذا النطاق لتحميلها');
       return;
     }
 
     const content = translatedChapters
-      .map(c => c.content_arabic)
+      .map(c => `الفصل ${c.chapter_number}\n\n${c.content_arabic}`)
       .join('\n\n' + '='.repeat(30) + '\n\n');
 
     const blob = new Blob([content], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${novel.title}_ترجمة.txt`;
+    const rangeSuffix = !isNaN(start) && !isNaN(end) ? `_من_${start}_إلى_${end}` : '';
+    a.download = `${novel.title}${rangeSuffix}_ترجمة.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    setShowDownloadModal(false);
   };
 
   const filteredChapters = chapters.filter(chap => {
@@ -578,7 +591,11 @@ export const NovelDetail: React.FC = () => {
               </button>
             )}
             <button 
-              onClick={handleDownloadTranslated}
+              onClick={() => {
+                setDownloadRangeStart('1');
+                setDownloadRangeEnd(chapters.length.toString());
+                setShowDownloadModal(true);
+              }}
               className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm"
             >
               <Download size={16} />
@@ -917,6 +934,72 @@ export const NovelDetail: React.FC = () => {
           <p className="text-lg">لا توجد فصول لهذه الرواية بعد. قم برفع ملف TXT للبدء.</p>
         </div>
       )}
+
+      {/* Download Range Modal */}
+      <AnimatePresence>
+        {showDownloadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDownloadModal(false)}
+              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
+                <h3 className="text-xl font-bold">تحميل الفصول المترجمة</h3>
+                <button onClick={() => setShowDownloadModal(false)} className="text-stone-400 hover:text-stone-600">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <p className="text-sm text-stone-500">اختر نطاق الفصول التي تريد تحميلها في ملف نصي واحد.</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-stone-600 uppercase">من فصل</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={downloadRangeStart}
+                      onChange={(e) => setDownloadRangeStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-stone-600 uppercase">إلى فصل</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                      value={downloadRangeEnd}
+                      onChange={(e) => setDownloadRangeEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
+                  <p className="text-xs text-emerald-700 font-medium">
+                    سيتم تحميل الفصول المترجمة فقط ضمن هذا النطاق.
+                  </p>
+                </div>
+
+                <button 
+                  onClick={handleDownloadTranslated}
+                  className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+                >
+                  <Download size={20} />
+                  تحميل الملف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Upload Preview Modal */}
       <AnimatePresence>
