@@ -17,12 +17,14 @@ import {
   LogOut,
   RefreshCw,
   Database,
-  WifiOff
+  WifiOff,
+  Link2
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NovelList } from './components/NovelList';
 import { NovelDetail } from './components/NovelDetail';
 import { BackupManager } from './components/BackupManager';
+import { ScraperModal } from './components/ScraperModal';
 import pkg from '../package.json';
 
 const APP_VERSION = pkg.version;
@@ -113,6 +115,7 @@ function AppContent() {
   const navigate = useNavigate();
   const [novels, setNovels] = useState<Novel[]>([]);
   const [isAddingNovel, setIsAddingNovel] = useState(false);
+  const [isScraperOpen, setIsScraperOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -211,13 +214,23 @@ function AppContent() {
           <div className="flex items-center gap-4">
             <Routes>
               <Route path="/" element={
-                <button 
-                  onClick={() => setIsAddingNovel(true)}
-                  className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-100"
-                >
-                  <Plus size={20} />
-                  <span>إضافة رواية</span>
-                </button>
+                <div className="flex items-center gap-2">
+                  <button 
+                    onClick={() => setIsScraperOpen(true)}
+                    className="flex items-center gap-2 bg-stone-100 text-stone-600 px-4 py-2 rounded-xl hover:bg-stone-200 transition-colors border border-stone-200"
+                    title="سحب من رابط"
+                  >
+                    <Link2 size={20} />
+                    <span className="hidden sm:inline">سحب من رابط</span>
+                  </button>
+                  <button 
+                    onClick={() => setIsAddingNovel(true)}
+                    className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-100"
+                  >
+                    <Plus size={20} />
+                    <span>إضافة رواية</span>
+                  </button>
+                </div>
               } />
               <Route path="/novel/:id" element={
                 <button 
@@ -275,6 +288,16 @@ function AppContent() {
 
       {/* Add Novel Modal */}
       <AnimatePresence>
+        {isScraperOpen && (
+          <ScraperModal 
+            isOpen={isScraperOpen}
+            onClose={() => setIsScraperOpen(false)}
+            novels={novels}
+            onSuccess={() => {
+              // Optionally show a toast or refresh something
+            }}
+          />
+        )}
         {isAddingNovel && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div 

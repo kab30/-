@@ -24,12 +24,16 @@ import {
   FileSearch,
   AlertCircle,
   CheckCircle2,
-  StickyNote
+  StickyNote,
+  Link2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import ePub from 'epubjs';
+import { ScraperModal } from './ScraperModal';
+import { CleaningRulesModal } from './CleaningRulesModal';
+import { Settings2 } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -57,6 +61,8 @@ export const NovelDetail: React.FC = () => {
   const [editedTotalChapters, setEditedTotalChapters] = useState('');
   const [isEditingNotes, setIsEditingNotes] = useState(false);
   const [editedNotes, setEditedNotes] = useState('');
+  const [isScraperOpen, setIsScraperOpen] = useState(false);
+  const [isCleaningRulesOpen, setIsCleaningRulesOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [chapterFilter, setChapterFilter] = useState<'all' | 'translated' | 'untranslated'>('all');
   const [pendingChapters, setPendingChapters] = useState<any[]>([]);
@@ -912,6 +918,21 @@ export const NovelDetail: React.FC = () => {
                 disabled={isUploading}
               />
             </label>
+            <button 
+              onClick={() => setIsScraperOpen(true)}
+              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors shadow-sm"
+            >
+              <Link2 size={20} className="text-emerald-600" />
+              <span>سحب من رابط</span>
+            </button>
+            <button 
+              onClick={() => setIsCleaningRulesOpen(true)}
+              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors shadow-sm"
+              title="قواعد تنظيف الفصول"
+            >
+              <Settings2 size={20} className="text-amber-600" />
+              <span>تنظيف الفصول</span>
+            </button>
             {isUploading && (
               <div className="flex items-center gap-2 text-emerald-600 font-medium">
                 <Loader2 className="animate-spin" size={20} />
@@ -1253,6 +1274,30 @@ export const NovelDetail: React.FC = () => {
           <p className="text-lg">لا توجد فصول لهذه الرواية بعد. قم برفع ملف TXT للبدء.</p>
         </div>
       )}
+
+      {/* Scraper Modal */}
+      <AnimatePresence>
+        {isScraperOpen && novel && (
+          <ScraperModal 
+            isOpen={isScraperOpen}
+            onClose={() => setIsScraperOpen(false)}
+            novels={[novel]}
+            initialNovelId={novel.id}
+            onSuccess={fetchChapters}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Cleaning Rules Modal */}
+      <AnimatePresence>
+        {isCleaningRulesOpen && novel && (
+          <CleaningRulesModal 
+            isOpen={isCleaningRulesOpen}
+            onClose={() => setIsCleaningRulesOpen(false)}
+            novelId={novel.id}
+          />
+        )}
+      </AnimatePresence>
 
       {/* Check Missing Chapters Modal */}
       <AnimatePresence>

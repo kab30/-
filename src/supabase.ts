@@ -19,9 +19,36 @@ export interface Novel {
 export interface Chapter {
   id: string;
   novel_id: string;
-  chapter_number: number;
+  order_index: number;
   title: string;
   content_original: string;
   content_arabic: string | null;
   created_at: string;
+}
+
+export interface CleaningRule {
+  id: string;
+  novel_id: string;
+  pattern: string;
+  replacement: string;
+  is_regex: boolean;
+  created_at: string;
+}
+
+export interface CleaningLog {
+  id: string;
+  novel_id: string;
+  operation_type: string;
+  target: string;
+  rules_applied: any;
+  stats: Record<string, number>;
+  created_at: string;
+}
+
+export interface CleaningLogDetail {
+  id: string;
+  log_id: string;
+  chapter_id: string;
+  old_content_original: string | null;
+  old_content_arabic: string | null;
 }
