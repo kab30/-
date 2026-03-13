@@ -907,7 +907,11 @@ export const NovelDetail: React.FC = () => {
           </div>
           
           <div className="pt-4 flex gap-4">
-            <label className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 transition-colors shadow-lg">
+            <motion.label 
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 transition-all shadow-lg"
+            >
               <Upload size={20} />
               <span>رفع ملف الرواية (TXT / EPUB)</span>
               <input 
@@ -917,22 +921,26 @@ export const NovelDetail: React.FC = () => {
                 onChange={handleFileUpload}
                 disabled={isUploading}
               />
-            </label>
-            <button 
+            </motion.label>
+            <motion.button 
               onClick={() => setIsScraperOpen(true)}
-              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors shadow-sm"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-all shadow-sm"
             >
               <Link2 size={20} className="text-emerald-600" />
               <span>سحب من رابط</span>
-            </button>
-            <button 
+            </motion.button>
+            <motion.button 
               onClick={() => setIsCleaningRulesOpen(true)}
-              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-colors shadow-sm"
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-all shadow-sm"
               title="قواعد تنظيف الفصول"
             >
               <Settings2 size={20} className="text-amber-600" />
               <span>تنظيف الفصول</span>
-            </button>
+            </motion.button>
             {isUploading && (
               <div className="flex items-center gap-2 text-emerald-600 font-medium">
                 <Loader2 className="animate-spin" size={20} />
