@@ -195,16 +195,28 @@ export const NovelDetail: React.FC = () => {
     if (!confirm(`هل أنت متأكد من حذف ${selectedChapterIds.size} فصل؟`)) return;
 
     setIsLoading(true);
-    const { error } = await supabase
-      .from('chapters')
-      .delete()
-      .in('id', Array.from(selectedChapterIds));
+    const chapterIds = Array.from(selectedChapterIds);
+    const batchSize = 100;
+    let hasError = false;
 
-    if (error) {
-      alert('خطأ في حذف الفصول');
+    for (let i = 0; i < chapterIds.length; i += batchSize) {
+      const batch = chapterIds.slice(i, i + batchSize);
+      const { error } = await supabase
+        .from('chapters')
+        .delete()
+        .in('id', batch);
+      
+      if (error) {
+        console.error('Error deleting batch:', error);
+        hasError = true;
+        break;
+      }
+    }
+
+    if (hasError) {
+      alert('حدث خطأ أثناء حذف بعض الفصول');
     } else {
-      const deletedIds = Array.from(selectedChapterIds);
-      if (selectedChapter && deletedIds.includes(selectedChapter.id)) {
+      if (selectedChapter && chapterIds.includes(selectedChapter.id)) {
         setSelectedChapter(null);
         setArabicContent('');
       }
