@@ -27,6 +27,7 @@ import { NovelDetail } from './components/NovelDetail';
 import { BackupManager } from './components/BackupManager';
 import { ScraperModal } from './components/ScraperModal';
 import { GeminiImportModal } from './components/GeminiImportModal';
+import { ChangelogModal } from './components/ChangelogModal';
 import pkg from '../package.json';
 
 const APP_VERSION = pkg.version;
@@ -121,6 +122,16 @@ function AppContent() {
   const [isGeminiImportOpen, setIsGeminiImportOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showChangelog, setShowChangelog] = useState(false);
+
+  // Version Check Logic
+  useEffect(() => {
+    const lastSeenVersion = localStorage.getItem('last_seen_version');
+    if (lastSeenVersion !== APP_VERSION) {
+      setShowChangelog(true);
+      localStorage.setItem('last_seen_version', APP_VERSION);
+    }
+  }, []);
 
   useEffect(() => {
     const handleStatus = () => setIsOnline(navigator.onLine);
@@ -383,6 +394,12 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      <ChangelogModal 
+        isOpen={showChangelog} 
+        onClose={() => setShowChangelog(false)} 
+        version={APP_VERSION} 
+      />
+
       {/* Footer Version Info */}
       <footer className="max-w-6xl mx-auto px-4 py-8 border-t border-stone-200 flex flex-col md:flex-row items-center justify-between gap-4 text-stone-400 text-sm font-medium">
         <div className="flex items-center gap-2">
@@ -390,7 +407,10 @@ function AppContent() {
           <span>مستودع الروايات © {new Date().getFullYear()}</span>
         </div>
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1 bg-stone-100 px-3 py-1 rounded-full text-xs">
+          <div 
+            onClick={() => setShowChangelog(true)}
+            className="flex items-center gap-1 bg-stone-100 px-3 py-1 rounded-full text-xs cursor-pointer hover:bg-emerald-50 hover:text-emerald-600 transition-all"
+          >
             <RefreshCw size={12} className="animate-spin-slow" />
             <span>الإصدار: {APP_VERSION}</span>
           </div>

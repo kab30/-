@@ -242,7 +242,7 @@ async function startServer() {
         return res.status(404).json({ error: 'Could not find chat data in the page. It might be private or expired.' });
       }
 
-      const chapters: { number: number; title: string; content: string }[] = [];
+      const chaptersMap: Map<number, { number: number; title: string; content_original: string; content_arabic: string }> = new Map();
       let chapterCounter = 1;
 
       const findStrings = (obj: any) => {
@@ -255,34 +255,43 @@ async function startServer() {
 
           const firstLine = lines[0];
           
-          // Improved regex to catch more patterns including Chinese chapter numbers and numerals
-          // Patterns: Chapter 1, الفصل 1, 第1章, 第1, 第一百章
           const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
                                firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
           
-          // Word count check: Chinese characters don't use spaces, so we count length
-          const isChinese = /[\u4e00-\u9fa5]/.test(trimmed);
-          const wordCount = isChinese ? trimmed.length : trimmed.split(/\s+/).length;
+          const hasArabic = /[\u0600-\u06FF]/.test(trimmed);
+          const isCJK = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/.test(trimmed);
+          const wordCount = isCJK ? trimmed.length : trimmed.split(/\s+/).length;
           
-          // Threshold: 400 words for Eng/Ar, or 400 characters for Chinese
           if (wordCount >= 400) {
-            // Check if it looks like a chapter (starts with keyword or has the pattern in first line)
             const hasChapterKeyword = /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine) || 
                                      /^(?:Chapter|الفصل|فصل|第)/i.test(trimmed);
 
             if (hasChapterKeyword || chapterMatch) {
               let numStr = chapterMatch ? chapterMatch[1] : String(chapterCounter++);
-              // If it's a Chinese numeral, we'll just keep it as string or try to parse if it's digits
               const num = /^\d+$/.test(numStr) ? parseInt(numStr) : chapterCounter++;
               
               const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
               
-              if (!chapters.find(c => c.content === trimmed)) {
-                chapters.push({
+              if (!chaptersMap.has(num)) {
+                chaptersMap.set(num, {
                   number: num,
                   title: title,
-                  content: trimmed
+                  content_original: !hasArabic ? trimmed : '',
+                  content_arabic: hasArabic ? trimmed : ''
                 });
+              } else {
+                const existing = chaptersMap.get(num)!;
+                if (!hasArabic) {
+                  existing.content_original = trimmed;
+                  if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) {
+                    existing.title = title;
+                  }
+                } else {
+                  existing.content_arabic = trimmed;
+                  if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) {
+                    existing.title = title;
+                  }
+                }
               }
             }
           }
@@ -295,6 +304,7 @@ async function startServer() {
 
       findStrings(chatData);
 
+      const chapters = Array.from(chaptersMap.values());
       // Sort chapters by number
       chapters.sort((a, b) => a.number - b.number);
 

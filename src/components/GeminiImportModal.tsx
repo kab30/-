@@ -23,7 +23,8 @@ interface GeminiImportModalProps {
 interface GeminiChapter {
   number: number;
   title: string;
-  content: string;
+  content_original: string;
+  content_arabic: string;
 }
 
 export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, onClose, novels }) => {
@@ -90,15 +91,16 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     
     // Split by common chapter indicators
     const parts = manualText.split(/(?=Chapter|الفصل|第\s*\d+\s*章|فصل\s*\d+)/i);
-    const detectedChapters: GeminiChapter[] = [];
+    const chaptersMap: Map<number, GeminiChapter> = new Map();
     let counter = 1;
 
     parts.forEach(part => {
       const trimmed = part.trim();
       
       // Word count check: Chinese characters don't use spaces
-      const isChinese = /[\u4e00-\u9fa5]/.test(trimmed);
-      const wordCount = isChinese ? trimmed.length : trimmed.split(/\s+/).length;
+      const hasArabic = /[\u0600-\u06FF]/.test(trimmed);
+      const isCJK = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/.test(trimmed);
+      const wordCount = isCJK ? trimmed.length : trimmed.split(/\s+/).length;
       
       if (wordCount < 400) return; // Skip if less than 400 words/chars
 
@@ -119,12 +121,26 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       const num = /^\d+$/.test(numStr) ? parseInt(numStr) : counter++;
       const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
 
-      detectedChapters.push({
-        number: num,
-        title: title,
-        content: trimmed
-      });
+      if (!chaptersMap.has(num)) {
+        chaptersMap.set(num, {
+          number: num,
+          title: title,
+          content_original: !hasArabic ? trimmed : '',
+          content_arabic: hasArabic ? trimmed : ''
+        });
+      } else {
+        const existing = chaptersMap.get(num)!;
+        if (!hasArabic) {
+          existing.content_original = trimmed;
+          if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) existing.title = title;
+        } else {
+          existing.content_arabic = trimmed;
+          if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) existing.title = title;
+        }
+      }
     });
+
+    const detectedChapters = Array.from(chaptersMap.values()).sort((a, b) => a.number - b.number);
 
     if (detectedChapters.length > 0) {
       setChapters(detectedChapters);
@@ -141,10 +157,19 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     setSelectedIndices(newSelection);
   };
 
-  const handleSave = async () => {
-    if (!selectedNovelId || selectedIndices.size === 0) return;
+  const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0 });
+
+  const handleSave = async (e: React.MouseEvent) => {
+    console.log('Save button clicked!');
+    e.preventDefault();
+    if (!selectedNovelId || selectedIndices.size === 0) {
+      setError('يرجى اختيار رواية وتحديد فصل واحد على الأقل.');
+      return;
+    }
+    
     setIsSaving(true);
     setError('');
+    setSaveProgress({ current: 0, total: selectedIndices.size });
 
     try {
       const chaptersToSave = chapters
@@ -153,24 +178,46 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           novel_id: selectedNovelId,
           chapter_number: c.number,
           title: c.title,
-          content_original: '', // We don't have the original from Gemini share usually
-          content_arabic: c.content,
+          content_original: c.content_original, 
+          content_arabic: c.content_arabic,
           created_at: new Date().toISOString()
         }));
 
-      // Batch insert/upsert
-      const { error: saveError } = await supabase
-        .from('chapters')
-        .upsert(chaptersToSave, { onConflict: 'novel_id,chapter_number' });
+      if (chaptersToSave.length === 0) {
+        setError('لا توجد فصول مختارة صالحة للحفظ.');
+        setIsSaving(false);
+        return;
+      }
 
-      if (saveError) throw saveError;
+      // Smaller chunk size for better reliability
+      const chunkSize = 10;
+      let savedCount = 0;
+      
+      for (let i = 0; i < chaptersToSave.length; i += chunkSize) {
+        const chunk = chaptersToSave.slice(i, i + chunkSize);
+        
+        const { error: saveError } = await supabase
+          .from('chapters')
+          .upsert(chunk, { 
+            onConflict: 'novel_id,chapter_number'
+          });
 
-      alert(`تم حفظ ${chaptersToSave.length} فصل بنجاح!`);
+        if (saveError) {
+          throw new Error(saveError.message);
+        }
+        
+        savedCount += chunk.length;
+        setSaveProgress(prev => ({ ...prev, current: savedCount }));
+      }
+
+      alert(`تم حفظ ${savedCount} فصل بنجاح!`);
       onClose();
     } catch (err: any) {
-      setError('خطأ أثناء حفظ الفصول: ' + err.message);
+      console.error('Save error:', err);
+      setError('خطأ أثناء حفظ الفصول: ' + (err.message || 'حدث خطأ غير متوقع'));
     } finally {
       setIsSaving(false);
+      setSaveProgress({ current: 0, total: 0 });
     }
   };
 
@@ -203,7 +250,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
               <p className="text-xs text-stone-400 font-medium">استخراج الفصول المترجمة من روابط المشاركة</p>
             </div>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
+          <button type="button" onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
             <X size={24} />
           </button>
         </div>
@@ -212,12 +259,14 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           {/* Tabs */}
           <div className="flex p-1 bg-stone-100 rounded-2xl">
             <button 
+              type="button"
               onClick={() => setImportMode('url')}
               className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'url' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
             >
               عبر الرابط
             </button>
             <button 
+              type="button"
               onClick={() => setImportMode('manual')}
               className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'manual' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
             >
@@ -241,6 +290,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                   onChange={(e) => setUrl(e.target.value)}
                 />
                 <button 
+                  type="button"
                   onClick={handleFetch}
                   disabled={isLoading || !url}
                   className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50 flex items-center gap-2"
@@ -263,6 +313,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                 onChange={(e) => setManualText(e.target.value)}
               />
               <button 
+                type="button"
                 onClick={handleManualParse}
                 disabled={!manualText}
                 className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
@@ -306,6 +357,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                     placeholder="10"
                   />
                   <button 
+                    type="button"
                     onClick={handleApplyRange}
                     className="bg-stone-800 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors"
                   >
@@ -315,6 +367,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
 
                 <div className="flex gap-2 shrink-0">
                   <button 
+                    type="button"
                     onClick={() => setSelectedIndices(new Set(chapters.map((_, i) => i)))}
                     className="text-xs font-bold text-blue-600 hover:underline"
                   >
@@ -322,6 +375,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                   </button>
                   <span className="text-stone-300">|</span>
                   <button 
+                    type="button"
                     onClick={() => setSelectedIndices(new Set())}
                     className="text-xs font-bold text-stone-400 hover:underline"
                   >
@@ -342,6 +396,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                   >
                     <div className="flex items-center gap-3 min-w-0">
                       <button 
+                        type="button"
                         onClick={() => toggleSelect(index)}
                         className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                           selectedIndices.has(index) 
@@ -352,11 +407,22 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                         {selectedIndices.has(index) && <Check size={14} />}
                       </button>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-stone-400 uppercase tracking-wider">فصل {chapter.number}</div>
+                        <div className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                          فصل {chapter.number}
+                          <div className="flex gap-1">
+                            {chapter.content_original && (
+                              <span className="px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded text-[10px]">أصلي</span>
+                            )}
+                            {chapter.content_arabic && (
+                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-500 rounded text-[10px]">مترجم</span>
+                            )}
+                          </div>
+                        </div>
                         <div className="font-bold text-stone-800 truncate">{chapter.title}</div>
                       </div>
                     </div>
                     <button 
+                      type="button"
                       onClick={() => setPreviewChapter(chapter)}
                       className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
                       title="معاينة الفصل"
@@ -384,12 +450,22 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                 </div>
 
                 <button 
+                  type="button"
                   onClick={handleSave}
                   disabled={isSaving || !selectedNovelId || selectedIndices.size === 0}
                   className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 disabled:opacity-50"
                 >
-                  {isSaving ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
-                  <span>حفظ الفصول المختارة ({selectedIndices.size})</span>
+                  {isSaving ? (
+                    <>
+                      <Loader2 className="animate-spin" size={24} />
+                      <span>جاري الحفظ ({saveProgress.current} / {saveProgress.total})...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save size={24} />
+                      <span>حفظ الفصول المختارة ({selectedIndices.size})</span>
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -416,12 +492,23 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
             >
               <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0">
                 <h4 className="text-lg font-bold text-stone-900">{previewChapter.title}</h4>
-                <button onClick={() => setPreviewChapter(null)} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
+                <button type="button" onClick={() => setPreviewChapter(null)} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-8 overflow-y-auto text-stone-700 leading-relaxed whitespace-pre-wrap font-medium">
-                {previewChapter.content}
+              <div className="p-8 overflow-y-auto text-stone-700 leading-relaxed whitespace-pre-wrap font-medium space-y-6">
+                {previewChapter.content_original && (
+                  <div>
+                    <div className="text-xs font-bold text-stone-400 uppercase mb-2 border-b border-stone-100 pb-1">النص الأصلي</div>
+                    <div className="bg-stone-50 p-4 rounded-xl text-sm">{previewChapter.content_original}</div>
+                  </div>
+                )}
+                {previewChapter.content_arabic && (
+                  <div>
+                    <div className="text-xs font-bold text-blue-400 uppercase mb-2 border-b border-blue-50 pb-1">الترجمة العربية</div>
+                    <div className="bg-blue-50/30 p-4 rounded-xl">{previewChapter.content_arabic}</div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>
