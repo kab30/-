@@ -11,14 +11,14 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
+      title: 'تحسين دمج الفصول',
+      description: 'حل مشكلة حفظ الفصول الأصلية والمترجمة بشكل منفصل ودعم الأرقام العربية والفارسية (١، ٢، ٣).',
+      icon: <Zap className="text-amber-500" size={20} />
+    },
+    {
       title: 'الجلب الذكي من Gemini',
       description: 'دعم كامل للتعرف على اللغات (صيني، إنجليزي، ياباني) مقابل العربية وتوزيعها تلقائياً.',
       icon: <Globe className="text-blue-500" size={20} />
-    },
-    {
-      title: 'دمج النصوص التلقائي',
-      description: 'دمج النص الأصلي والترجمة في فصل واحد عند جلبها من نفس رقم الفصل.',
-      icon: <Zap className="text-amber-500" size={20} />
     },
     {
       title: 'شريط تقدم الحفظ',
@@ -27,7 +27,7 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose,
     },
     {
       title: 'تحسين استقرار النظام',
-      description: 'حل مشكلة إعادة تحميل الصفحة المفاجئ (Refresh) أثناء عمليات الحفظ الكبيرة.',
+      description: 'حل مشكلة إعادة تحميل الصفحة المفاجئ أثناء عمليات الحفظ الكبيرة وتحسين دقة التعرف على الفصول.',
       icon: <CheckCircle2 className="text-indigo-500" size={20} />
     }
   ];
