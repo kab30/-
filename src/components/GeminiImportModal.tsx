@@ -88,7 +88,6 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     if (!manualText) return;
     setError('');
     
-    // Simple parsing logic for manual text
     // Split by common chapter indicators
     const parts = manualText.split(/(?=Chapter|الفصل|第\s*\d+\s*章|فصل\s*\d+)/i);
     const detectedChapters: GeminiChapter[] = [];
@@ -96,12 +95,24 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
 
     parts.forEach(part => {
       const trimmed = part.trim();
-      if (trimmed.length < 50) return; // Skip small fragments
+      
+      // Word count check
+      const wordCount = trimmed.split(/\s+/).length;
+      if (wordCount < 400) return; // Skip if less than 400 words
 
       const lines = trimmed.split('\n');
       const firstLine = lines[0].trim();
       const chapterMatch = firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*(\d+)/i);
       
+      // Check if it really looks like a chapter header
+      const isChapterHeader = chapterMatch || 
+                             firstLine.toLowerCase().startsWith('chapter') || 
+                             firstLine.startsWith('الفصل') || 
+                             firstLine.startsWith('فصل') ||
+                             firstLine.startsWith('第');
+
+      if (!isChapterHeader) return;
+
       const num = chapterMatch ? parseInt(chapterMatch[1]) : counter++;
       const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
 
@@ -116,7 +127,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       setChapters(detectedChapters);
       setSelectedIndices(new Set(detectedChapters.map((_, i) => i)));
     } else {
-      setError('لم نتمكن من التعرف على فصول في النص الملصق. تأكد من وجود كلمة "فصل" أو "Chapter" قبل كل فصل.');
+      setError('لم نتمكن من العثور على فصول مطابقة (يجب أن يبدأ بـ "فصل" أو "Chapter" ويكون طوله 400 كلمة على الأقل).');
     }
   };
 
