@@ -247,78 +247,54 @@ async function startServer() {
 
       const findStrings = (obj: any) => {
         if (typeof obj === 'string') {
-          // Split the string into potential chapters
-          const parts = obj.split(/(?=Chapter|الفصل|فصل|第\s*[0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+\s*章|第\s*[0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i);
+          const trimmed = obj.trim();
+          if (trimmed.length < 100) return; // Basic length filter
+
+          const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+          if (lines.length === 0) return;
+
+          const firstLine = lines[0];
           
-          parts.forEach(part => {
-            const trimmed = part.trim();
-            if (trimmed.length < 100) return;
+          const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
+                               firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
+          
+          const hasArabic = /[\u0600-\u06FF]/.test(trimmed);
+          const isCJK = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/.test(trimmed);
+          const wordCount = isCJK ? trimmed.length : trimmed.split(/\s+/).length;
+          
+          if (wordCount >= 400) {
+            const hasChapterKeyword = /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine) || 
+                                     /^(?:Chapter|الفصل|فصل|第)/i.test(trimmed);
 
-            const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-            if (lines.length === 0) return;
-
-            const firstLine = lines[0];
-            
-            // Permissive regex to catch chapter numbers including Arabic/Persian numerals
-            const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)[:\s]*([0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i) ||
-                                 firstLine.match(/(?:Chapter|الفصل|فصل|第)[:\s]*([0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i);
-            
-            const hasArabic = /[\u0600-\u06FF]/.test(trimmed);
-            const isCJK = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/.test(trimmed);
-            const wordCount = isCJK ? trimmed.length : trimmed.split(/\s+/).length;
-            
-            if (wordCount >= 200) { // Lowered threshold to be more inclusive
-              const hasChapterKeyword = /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine) || 
-                                       /^(?:Chapter|الفصل|فصل|第)/i.test(trimmed);
-
-              if (hasChapterKeyword || chapterMatch) {
-                let num: number;
-                if (chapterMatch) {
-                  const numStr = chapterMatch[1];
-                  // Convert Arabic/Persian numerals to Western
-                  const western = numStr.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
-                                       .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
-                  num = parseInt(western);
-                  if (isNaN(num)) num = chapterCounter++;
-                } else {
-                  num = chapterCounter++;
-                }
-                
-                const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
-                
-                // If a part contains BOTH a lot of original and Arabic, try to split it
-                // This is a simple heuristic: if it has Arabic and is long, it might be both
-                // For now, we'll stick to the existing logic but refine the hasArabic check
-                // to be more specific about whether it's PRIMARILY Arabic or not.
-                
-                // Better heuristic: if it contains both, we might want to split.
-                // But for now, let's just ensure they merge correctly if they are separate parts.
-                
-                if (!chaptersMap.has(num)) {
-                  chaptersMap.set(num, {
-                    number: num,
-                    title: title,
-                    content_original: !hasArabic ? trimmed : '',
-                    content_arabic: hasArabic ? trimmed : ''
-                  });
-                } else {
-                  const existing = chaptersMap.get(num)!;
-                  if (hasArabic) {
-                    // If it has Arabic, it's likely the translation
-                    // But if it also has a lot of non-Arabic, it might be both
-                    // For simplicity, we'll append to Arabic if it's already there, or set it
-                    existing.content_arabic = (existing.content_arabic ? existing.content_arabic + '\n\n' : '') + trimmed;
-                  } else {
-                    existing.content_original = (existing.content_original ? existing.content_original + '\n\n' : '') + trimmed;
+            if (hasChapterKeyword || chapterMatch) {
+              let numStr = chapterMatch ? chapterMatch[1] : String(chapterCounter++);
+              const num = /^\d+$/.test(numStr) ? parseInt(numStr) : chapterCounter++;
+              
+              const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
+              
+              if (!chaptersMap.has(num)) {
+                chaptersMap.set(num, {
+                  number: num,
+                  title: title,
+                  content_original: !hasArabic ? trimmed : '',
+                  content_arabic: hasArabic ? trimmed : ''
+                });
+              } else {
+                const existing = chaptersMap.get(num)!;
+                if (!hasArabic) {
+                  existing.content_original = trimmed;
+                  if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) {
+                    existing.title = title;
                   }
-                  
+                } else {
+                  existing.content_arabic = trimmed;
                   if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) {
                     existing.title = title;
                   }
                 }
               }
             }
-          });
+          }
         } else if (Array.isArray(obj)) {
           obj.forEach(findStrings);
         } else if (typeof obj === 'object' && obj !== null) {

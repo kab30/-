@@ -90,7 +90,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     setError('');
     
     // Split by common chapter indicators
-    const parts = manualText.split(/(?=Chapter|الفصل|فصل|第\s*[0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+\s*章|第\s*[0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i);
+    const parts = manualText.split(/(?=Chapter|الفصل|第\s*\d+\s*章|فصل\s*\d+)/i);
     const chaptersMap: Map<number, GeminiChapter> = new Map();
     let counter = 1;
 
@@ -102,33 +102,23 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       const isCJK = /[\u4e00-\u9fa5\u3040-\u309f\u30a0-\u30ff]/.test(trimmed);
       const wordCount = isCJK ? trimmed.length : trimmed.split(/\s+/).length;
       
-      if (wordCount < 200) return; // Lowered threshold
+      if (wordCount < 400) return; // Skip if less than 400 words/chars
 
       const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       if (lines.length === 0) return;
       
       const firstLine = lines[0];
-      const chapterMatch = trimmed.match(/(?:Chapter|الفصل|فصل|第)[:\s]*([0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i) ||
-                           firstLine.match(/(?:Chapter|الفصل|فصل|第)[:\s]*([0-9\u0660-\u0669\u06f0-\u06f9\u4e00-\u9fa5]+)/i);
+      const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
+                           firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
       
       // Check if it really looks like a chapter header
       const isChapterHeader = chapterMatch || 
-                             /(?:Chapter|الفصل|فصل|第)/i.test(firstLine);
+                             /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine);
 
       if (!isChapterHeader) return;
 
-      let num: number;
-      if (chapterMatch) {
-        const numStr = chapterMatch[1];
-        // Convert Arabic/Persian numerals to Western
-        const western = numStr.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
-                             .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
-        num = parseInt(western);
-        if (isNaN(num)) num = counter++;
-      } else {
-        num = counter++;
-      }
-      
+      let numStr = chapterMatch ? chapterMatch[1] : String(counter++);
+      const num = /^\d+$/.test(numStr) ? parseInt(numStr) : counter++;
       const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
 
       if (!chaptersMap.has(num)) {
@@ -140,12 +130,13 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
         });
       } else {
         const existing = chaptersMap.get(num)!;
-        if (hasArabic) {
-          existing.content_arabic = (existing.content_arabic ? existing.content_arabic + '\n\n' : '') + trimmed;
+        if (!hasArabic) {
+          existing.content_original = trimmed;
+          if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) existing.title = title;
         } else {
-          existing.content_original = (existing.content_original ? existing.content_original + '\n\n' : '') + trimmed;
+          existing.content_arabic = trimmed;
+          if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) existing.title = title;
         }
-        if (existing.title.startsWith('فصل ') && !title.startsWith('فصل ')) existing.title = title;
       }
     });
 
@@ -155,7 +146,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       setChapters(detectedChapters);
       setSelectedIndices(new Set(detectedChapters.map((_, i) => i)));
     } else {
-      setError('لم نتمكن من العثور على فصول مطابقة (يجب أن يحتوي النص على "فصل" أو "Chapter" ويكون طوله 200 كلمة على الأقل).');
+      setError('لم نتمكن من العثور على فصول مطابقة (يجب أن يبدأ بـ "فصل" أو "Chapter" ويكون طوله 400 كلمة على الأقل).');
     }
   };
 
@@ -181,46 +172,41 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     setSaveProgress({ current: 0, total: selectedIndices.size });
 
     try {
-      // Fetch existing chapters for this novel to check for merges and avoid overwriting
-      const { data: existingChapters } = await supabase
-        .from('chapters')
-        .select('chapter_number, content_original, content_arabic')
-        .eq('novel_id', selectedNovelId);
-
       const chaptersToSave = chapters
-        .filter((_, i) => selectedIndices.has(i));
-
-      let savedCount = 0;
-      for (const c of chaptersToSave) {
-        const existing = existingChapters?.find(ec => ec.chapter_number === c.number);
-        
-        // Merge logic: prioritize new content but keep existing if new is empty
-        const mergedOriginal = (c.content_original && c.content_original.trim().length > 0) 
-          ? c.content_original 
-          : (existing?.content_original || '');
-          
-        const mergedArabic = (c.content_arabic && c.content_arabic.trim().length > 0) 
-          ? c.content_arabic 
-          : (existing?.content_arabic || '');
-
-        const payload = {
+        .filter((_, i) => selectedIndices.has(i))
+        .map(c => ({
           novel_id: selectedNovelId,
           chapter_number: c.number,
           title: c.title,
-          content_original: mergedOriginal,
-          content_arabic: mergedArabic,
-          created_at: existing ? undefined : new Date().toISOString()
-        };
+          content_original: c.content_original, 
+          content_arabic: c.content_arabic,
+          created_at: new Date().toISOString()
+        }));
 
+      if (chaptersToSave.length === 0) {
+        setError('لا توجد فصول مختارة صالحة للحفظ.');
+        setIsSaving(false);
+        return;
+      }
+
+      // Smaller chunk size for better reliability
+      const chunkSize = 10;
+      let savedCount = 0;
+      
+      for (let i = 0; i < chaptersToSave.length; i += chunkSize) {
+        const chunk = chaptersToSave.slice(i, i + chunkSize);
+        
         const { error: saveError } = await supabase
           .from('chapters')
-          .upsert(payload, { 
+          .upsert(chunk, { 
             onConflict: 'novel_id,chapter_number'
           });
 
-        if (saveError) throw saveError;
+        if (saveError) {
+          throw new Error(saveError.message);
+        }
         
-        savedCount++;
+        savedCount += chunk.length;
         setSaveProgress(prev => ({ ...prev, current: savedCount }));
       }
 
