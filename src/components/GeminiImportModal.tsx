@@ -40,15 +40,26 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
   const [isSaving, setIsSaving] = useState(false);
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
+  const [filterType, setFilterType] = useState<'all' | 'arabic' | 'original'>('all');
+
+  const filteredChapters = chapters.filter(chapter => {
+    if (filterType === 'arabic') return !!chapter.content_arabic;
+    if (filterType === 'original') return !!chapter.content_original;
+    return true;
+  });
 
   const handleApplyRange = () => {
     const from = parseInt(rangeFrom);
     const to = parseInt(rangeTo);
     if (isNaN(from) || isNaN(to)) return;
 
-    const newSelection = new Set<number>();
+    const newSelection = new Set<number>(selectedIndices);
     chapters.forEach((chapter, index) => {
-      if (chapter.number >= from && chapter.number <= to) {
+      // Only apply to filtered chapters if we want to be precise, 
+      // but usually range applies to the whole set.
+      // Let's make it apply to the visible ones for better UX.
+      const isVisible = filteredChapters.some(fc => fc.number === chapter.number);
+      if (isVisible && chapter.number >= from && chapter.number <= to) {
         newSelection.add(index);
       }
     });
@@ -333,104 +344,168 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           {/* Results Area */}
           {chapters.length > 0 && (
             <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-stone-50 p-4 rounded-2xl border border-stone-100">
-                <h4 className="font-bold text-stone-800 flex items-center gap-2 shrink-0">
-                  <Book size={18} className="text-emerald-500" />
-                  الفصول المكتشفة ({chapters.length})
-                </h4>
-                
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  <span className="text-xs font-bold text-stone-500 shrink-0">تحديد من:</span>
-                  <input 
-                    type="number" 
-                    className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
-                    value={rangeFrom}
-                    onChange={(e) => setRangeFrom(e.target.value)}
-                    placeholder="1"
-                  />
-                  <span className="text-xs font-bold text-stone-500 shrink-0">إلى:</span>
-                  <input 
-                    type="number" 
-                    className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
-                    value={rangeTo}
-                    onChange={(e) => setRangeTo(e.target.value)}
-                    placeholder="10"
-                  />
-                  <button 
-                    type="button"
-                    onClick={handleApplyRange}
-                    className="bg-stone-800 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors"
-                  >
-                    تطبيق
-                  </button>
+              {/* Filters & Actions */}
+              <div className="space-y-4">
+                <div className="flex flex-wrap items-center justify-between gap-4">
+                  <div className="flex items-center gap-2 bg-stone-100 p-1 rounded-xl">
+                    <button 
+                      type="button"
+                      onClick={() => setFilterType('all')}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                    >
+                      الكل
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setFilterType('arabic')}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'arabic' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                    >
+                      العربية فقط
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setFilterType('original')}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'original' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                    >
+                      الأصلية (الصينية)
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newSelection = new Set(selectedIndices);
+                        filteredChapters.forEach(fc => {
+                          const idx = chapters.findIndex(c => c.number === fc.number);
+                          if (idx !== -1) newSelection.add(idx);
+                        });
+                        setSelectedIndices(newSelection);
+                      }}
+                      className="text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      تحديد المفلتر
+                    </button>
+                    <span className="text-stone-300">|</span>
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        const newSelection = new Set(selectedIndices);
+                        filteredChapters.forEach(fc => {
+                          const idx = chapters.findIndex(c => c.number === fc.number);
+                          if (idx !== -1) newSelection.delete(idx);
+                        });
+                        setSelectedIndices(newSelection);
+                      }}
+                      className="text-xs font-bold text-stone-400 hover:underline"
+                    >
+                      إلغاء المفلتر
+                    </button>
+                  </div>
                 </div>
 
-                <div className="flex gap-2 shrink-0">
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedIndices(new Set(chapters.map((_, i) => i)))}
-                    className="text-xs font-bold text-blue-600 hover:underline"
-                  >
-                    تحديد الكل
-                  </button>
-                  <span className="text-stone-300">|</span>
-                  <button 
-                    type="button"
-                    onClick={() => setSelectedIndices(new Set())}
-                    className="text-xs font-bold text-stone-400 hover:underline"
-                  >
-                    إلغاء التحديد
-                  </button>
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-stone-50 p-4 rounded-2xl border border-stone-100">
+                  <h4 className="font-bold text-stone-800 flex items-center gap-2 shrink-0">
+                    <Book size={18} className="text-emerald-500" />
+                    الفصول ({filteredChapters.length} من {chapters.length})
+                  </h4>
+                  
+                  <div className="flex items-center gap-2 w-full sm:w-auto">
+                    <span className="text-xs font-bold text-stone-500 shrink-0">تحديد من:</span>
+                    <input 
+                      type="number" 
+                      className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
+                      value={rangeFrom}
+                      onChange={(e) => setRangeFrom(e.target.value)}
+                      placeholder="1"
+                    />
+                    <span className="text-xs font-bold text-stone-500 shrink-0">إلى:</span>
+                    <input 
+                      type="number" 
+                      className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
+                      value={rangeTo}
+                      onChange={(e) => setRangeTo(e.target.value)}
+                      placeholder="10"
+                    />
+                    <button 
+                      type="button"
+                      onClick={handleApplyRange}
+                      className="bg-stone-800 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                    >
+                      تطبيق
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2 shrink-0">
+                    <button 
+                      type="button"
+                      onClick={() => setSelectedIndices(new Set(chapters.map((_, i) => i)))}
+                      className="text-xs font-bold text-blue-600 hover:underline"
+                    >
+                      تحديد الكل
+                    </button>
+                    <span className="text-stone-300">|</span>
+                    <button 
+                      type="button"
+                      onClick={() => setSelectedIndices(new Set())}
+                      className="text-xs font-bold text-stone-400 hover:underline"
+                    >
+                      إلغاء التحديد
+                    </button>
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {chapters.map((chapter, index) => (
-                  <div 
-                    key={index}
-                    className={`group p-4 rounded-2xl border transition-all flex items-center justify-between ${
-                      selectedIndices.has(index) 
-                        ? 'bg-emerald-50 border-emerald-200 shadow-sm' 
-                        : 'bg-white border-stone-100 hover:border-stone-200'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
+                {filteredChapters.map((chapter) => {
+                  const originalIndex = chapters.findIndex(c => c.number === chapter.number);
+                  return (
+                    <div 
+                      key={chapter.number}
+                      className={`group p-4 rounded-2xl border transition-all flex items-center justify-between ${
+                        selectedIndices.has(originalIndex) 
+                          ? 'bg-emerald-50 border-emerald-200 shadow-sm' 
+                          : 'bg-white border-stone-100 hover:border-stone-200'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button 
+                          type="button"
+                          onClick={() => toggleSelect(originalIndex)}
+                          className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
+                            selectedIndices.has(originalIndex) 
+                              ? 'bg-emerald-500 border-emerald-500 text-white' 
+                              : 'border-stone-200 bg-white'
+                          }`}
+                        >
+                          {selectedIndices.has(originalIndex) && <Check size={14} />}
+                        </button>
+                        <div className="min-w-0">
+                          <div className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                            فصل {chapter.number}
+                            <div className="flex gap-1">
+                              {chapter.content_original && (
+                                <span className="px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded text-[10px]">أصلي</span>
+                              )}
+                              {chapter.content_arabic && (
+                                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-500 rounded text-[10px]">مترجم</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="font-bold text-stone-800 truncate">{chapter.title}</div>
+                        </div>
+                      </div>
                       <button 
                         type="button"
-                        onClick={() => toggleSelect(index)}
-                        className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
-                          selectedIndices.has(index) 
-                            ? 'bg-emerald-500 border-emerald-500 text-white' 
-                            : 'border-stone-200 bg-white'
-                        }`}
+                        onClick={() => setPreviewChapter(chapter)}
+                        className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        title="معاينة الفصل"
                       >
-                        {selectedIndices.has(index) && <Check size={14} />}
+                        <Eye size={20} />
                       </button>
-                      <div className="min-w-0">
-                        <div className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2">
-                          فصل {chapter.number}
-                          <div className="flex gap-1">
-                            {chapter.content_original && (
-                              <span className="px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded text-[10px]">أصلي</span>
-                            )}
-                            {chapter.content_arabic && (
-                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-500 rounded text-[10px]">مترجم</span>
-                            )}
-                          </div>
-                        </div>
-                        <div className="font-bold text-stone-800 truncate">{chapter.title}</div>
-                      </div>
                     </div>
-                    <button 
-                      type="button"
-                      onClick={() => setPreviewChapter(chapter)}
-                      className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
-                      title="معاينة الفصل"
-                    >
-                      <Eye size={20} />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               {/* Novel Selection & Save */}
