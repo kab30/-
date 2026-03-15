@@ -248,34 +248,42 @@ async function startServer() {
       const findStrings = (obj: any) => {
         if (typeof obj === 'string') {
           const trimmed = obj.trim();
-          const lines = trimmed.split('\n');
-          const firstLine = lines[0].trim();
-          
-          // Improved regex to catch more patterns including Chinese chapter numbers
-          // Patterns: Chapter 1, الفصل 1, 第1章, 第1
-          const chapterMatch = firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*(\d+)/i);
-          
-          // Word count check (approximate for Arabic/English by splitting spaces)
-          const wordCount = trimmed.split(/\s+/).length;
-          
-          // Only accept if it matches chapter pattern AND has significant length (400+ words)
-          // Or if it's very long and starts with chapter-like keywords
-          const isChapterHeader = chapterMatch || 
-                                 firstLine.toLowerCase().startsWith('chapter') || 
-                                 firstLine.startsWith('الفصل') || 
-                                 firstLine.startsWith('فصل') ||
-                                 firstLine.startsWith('第');
+          if (trimmed.length < 100) return; // Basic length filter
 
-          if (isChapterHeader && wordCount >= 400) {
-            const num = chapterMatch ? parseInt(chapterMatch[1]) : chapterCounter++;
-            const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
-            
-            if (!chapters.find(c => c.content === trimmed)) {
-              chapters.push({
-                number: num,
-                title: title,
-                content: trimmed
-              });
+          const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+          if (lines.length === 0) return;
+
+          const firstLine = lines[0];
+          
+          // Improved regex to catch more patterns including Chinese chapter numbers and numerals
+          // Patterns: Chapter 1, الفصل 1, 第1章, 第1, 第一百章
+          const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
+                               firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
+          
+          // Word count check: Chinese characters don't use spaces, so we count length
+          const isChinese = /[\u4e00-\u9fa5]/.test(trimmed);
+          const wordCount = isChinese ? trimmed.length : trimmed.split(/\s+/).length;
+          
+          // Threshold: 400 words for Eng/Ar, or 400 characters for Chinese
+          if (wordCount >= 400) {
+            // Check if it looks like a chapter (starts with keyword or has the pattern in first line)
+            const hasChapterKeyword = /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine) || 
+                                     /^(?:Chapter|الفصل|فصل|第)/i.test(trimmed);
+
+            if (hasChapterKeyword || chapterMatch) {
+              let numStr = chapterMatch ? chapterMatch[1] : String(chapterCounter++);
+              // If it's a Chinese numeral, we'll just keep it as string or try to parse if it's digits
+              const num = /^\d+$/.test(numStr) ? parseInt(numStr) : chapterCounter++;
+              
+              const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
+              
+              if (!chapters.find(c => c.content === trimmed)) {
+                chapters.push({
+                  number: num,
+                  title: title,
+                  content: trimmed
+                });
+              }
             }
           }
         } else if (Array.isArray(obj)) {

@@ -96,24 +96,27 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     parts.forEach(part => {
       const trimmed = part.trim();
       
-      // Word count check
-      const wordCount = trimmed.split(/\s+/).length;
-      if (wordCount < 400) return; // Skip if less than 400 words
+      // Word count check: Chinese characters don't use spaces
+      const isChinese = /[\u4e00-\u9fa5]/.test(trimmed);
+      const wordCount = isChinese ? trimmed.length : trimmed.split(/\s+/).length;
+      
+      if (wordCount < 400) return; // Skip if less than 400 words/chars
 
-      const lines = trimmed.split('\n');
-      const firstLine = lines[0].trim();
-      const chapterMatch = firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*(\d+)/i);
+      const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      if (lines.length === 0) return;
+      
+      const firstLine = lines[0];
+      const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
+                           firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
       
       // Check if it really looks like a chapter header
       const isChapterHeader = chapterMatch || 
-                             firstLine.toLowerCase().startsWith('chapter') || 
-                             firstLine.startsWith('الفصل') || 
-                             firstLine.startsWith('فصل') ||
-                             firstLine.startsWith('第');
+                             /^(?:Chapter|الفصل|فصل|第)/i.test(firstLine);
 
       if (!isChapterHeader) return;
 
-      const num = chapterMatch ? parseInt(chapterMatch[1]) : counter++;
+      let numStr = chapterMatch ? chapterMatch[1] : String(counter++);
+      const num = /^\d+$/.test(numStr) ? parseInt(numStr) : counter++;
       const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
 
       detectedChapters.push({
