@@ -19,7 +19,7 @@ export interface Novel {
 export interface Chapter {
   id: string;
   novel_id: string;
-  order_index: number;
+  chapter_number: number;
   title: string;
   content_original: string;
   content_arabic: string | null;

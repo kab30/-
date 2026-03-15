@@ -160,6 +160,131 @@ async function startServer() {
     }
   });
 
+  // API Route for Gemini Share links
+  app.post('/api/gemini-share', async (req, res) => {
+    const { url } = req.body;
+    if (!url || !url.includes('gemini.google.com/share')) {
+      return res.status(400).json({ error: 'Valid Gemini share URL is required' });
+    }
+
+    try {
+      const response = await axios.get(url, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+          'Accept-Language': 'ar,en-US;q=0.9,en;q=0.8',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Sec-Ch-Ua': '"Chromium";v="122", "Not(A:Brand";v="24", "Google Chrome";v="122"',
+          'Sec-Ch-Ua-Mobile': '?0',
+          'Sec-Ch-Ua-Platform': '"Windows"',
+          'Sec-Fetch-Dest': 'document',
+          'Sec-Fetch-Mode': 'navigate',
+          'Sec-Fetch-Site': 'none',
+          'Sec-Fetch-User': '?1',
+          'Upgrade-Insecure-Requests': '1'
+        }
+      });
+
+      const html = response.data;
+      const $ = cheerio.load(html);
+      
+      // Gemini share data is often in a script tag
+      // We look for the script that contains the chat data
+      let chatData: any = null;
+      
+      $('script').each((i, el) => {
+        const text = $(el).text();
+        // Pattern 1: AF_initDataCallback
+        if (text.includes('AF_initDataCallback') && (text.includes('ds:1') || text.includes('sharedChat'))) {
+          try {
+            // More flexible regex for data extraction
+            const match = text.match(/data:\s*(\[[\s\S]*?\])\s*,\s*sideChannel/);
+            if (match) {
+              chatData = JSON.parse(match[1]);
+            }
+          } catch (e) {
+            console.error('Error parsing AF_initDataCallback:', e);
+          }
+        }
+        
+        // Pattern 2: window.WIZ_globalProps
+        if (!chatData && text.includes('WIZ_globalProps')) {
+          try {
+            const match = text.match(/WIZ_globalProps\s*=\s*(\{[\s\S]*?\});/);
+            if (match) {
+              const props = JSON.parse(match[1]);
+              if (props.data) chatData = props.data;
+            }
+          } catch (e) {}
+        }
+      });
+
+      if (!chatData) {
+        // Fallback: search for any large JSON-like array that might contain the chat
+        $('script').each((i, el) => {
+          if (chatData) return;
+          const text = $(el).text();
+          if (text.length > 5000 && text.includes('[[') && text.includes(']]')) {
+             // Try to find the largest array
+             const match = text.match(/\[\[[\s\S]*\]\]/);
+             if (match) {
+               try {
+                 const potential = JSON.parse(match[0]);
+                 if (Array.isArray(potential)) chatData = potential;
+               } catch(e) {}
+             }
+          }
+        });
+      }
+
+      if (!chatData) {
+        return res.status(404).json({ error: 'Could not find chat data in the page. It might be private or expired.' });
+      }
+
+      const chapters: { number: number; title: string; content: string }[] = [];
+      let chapterCounter = 1;
+
+      const findStrings = (obj: any) => {
+        if (typeof obj === 'string') {
+          const lines = obj.split('\n');
+          const firstLine = lines[0].trim();
+          
+          // Improved regex to catch more patterns including Chinese chapter numbers
+          const chapterMatch = firstLine.match(/(?:Chapter|الفصل|第)\s*(\d+)/i);
+          
+          // If it's a long text or matches chapter pattern
+          if (chapterMatch || (obj.length > 300 && (firstLine.includes('فصل') || firstLine.includes('Chapter')))) {
+            const num = chapterMatch ? parseInt(chapterMatch[1]) : chapterCounter++;
+            const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
+            
+            if (!chapters.find(c => c.content === obj)) {
+              chapters.push({
+                number: num,
+                title: title,
+                content: obj
+              });
+            }
+          }
+        } else if (Array.isArray(obj)) {
+          obj.forEach(findStrings);
+        } else if (typeof obj === 'object' && obj !== null) {
+          Object.values(obj).forEach(findStrings);
+        }
+      };
+
+      findStrings(chatData);
+
+      // Sort chapters by number
+      chapters.sort((a, b) => a.number - b.number);
+
+      res.json({ chapters });
+    } catch (error: any) {
+      console.error('Gemini share error:', error.message);
+      res.status(500).json({ error: 'Failed to fetch Gemini share link' });
+    }
+  });
+
   // Global error handler to ensure JSON responses for API
   app.use('/api', (err: any, req: any, res: any, next: any) => {
     console.error('API Error:', err);

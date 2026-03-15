@@ -18,13 +18,15 @@ import {
   RefreshCw,
   Database,
   WifiOff,
-  Link2
+  Link2,
+  Sparkles
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'motion/react';
 import { NovelList } from './components/NovelList';
 import { NovelDetail } from './components/NovelDetail';
 import { BackupManager } from './components/BackupManager';
 import { ScraperModal } from './components/ScraperModal';
+import { GeminiImportModal } from './components/GeminiImportModal';
 import pkg from '../package.json';
 
 const APP_VERSION = pkg.version;
@@ -116,6 +118,7 @@ function AppContent() {
   const [novels, setNovels] = useState<Novel[]>([]);
   const [isAddingNovel, setIsAddingNovel] = useState(false);
   const [isScraperOpen, setIsScraperOpen] = useState(false);
+  const [isGeminiImportOpen, setIsGeminiImportOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
 
@@ -216,6 +219,14 @@ function AppContent() {
               <Route path="/" element={
                 <div className="flex items-center gap-2">
                   <button 
+                    onClick={() => setIsGeminiImportOpen(true)}
+                    className="flex items-center gap-2 bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition-colors border border-blue-100"
+                    title="جلب من Gemini"
+                  >
+                    <Sparkles size={20} />
+                    <span className="hidden sm:inline">جلب من Gemini</span>
+                  </button>
+                  <button 
                     onClick={() => setIsScraperOpen(true)}
                     className="flex items-center gap-2 bg-stone-100 text-stone-600 px-4 py-2 rounded-xl hover:bg-stone-200 transition-colors border border-stone-200"
                     title="سحب من رابط"
@@ -296,6 +307,13 @@ function AppContent() {
             onSuccess={() => {
               // Optionally show a toast or refresh something
             }}
+          />
+        )}
+        {isGeminiImportOpen && (
+          <GeminiImportModal 
+            isOpen={isGeminiImportOpen}
+            onClose={() => setIsGeminiImportOpen(false)}
+            novels={novels}
           />
         )}
         {isAddingNovel && (
