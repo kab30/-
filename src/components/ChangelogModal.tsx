@@ -11,24 +11,24 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
-      title: 'تحسين دمج الفصول',
-      description: 'حل مشكلة حفظ الفصول الأصلية والمترجمة بشكل منفصل ودعم الأرقام العربية والفارسية (١، ٢، ٣).',
-      icon: <Zap className="text-amber-500" size={20} />
+      title: 'دليل برومت Gemini',
+      description: 'إضافة نافذة تحتوي على برومتات جاهزة للنسخ لتحسين جودة الترجمة والاستخراج.',
+      icon: <Sparkles className="text-amber-500" size={20} />
     },
     {
-      title: 'الجلب الذكي من Gemini',
-      description: 'دعم كامل للتعرف على اللغات (صيني، إنجليزي، ياباني) مقابل العربية وتوزيعها تلقائياً.',
+      title: 'تصفية اللغات الذكية',
+      description: 'إمكانية تحديد استخراج اللغة العربية أو الصينية فقط عند الجلب اليدوي لتجنب التداخل.',
       icon: <Globe className="text-blue-500" size={20} />
     },
     {
-      title: 'شريط تقدم الحفظ',
-      description: 'إضافة عداد ومتابعة حية لعملية حفظ الفصول لضمان عدم ضياع البيانات.',
-      icon: <Save className="text-emerald-500" size={20} />
+      title: 'تحسين الوضع الليلي',
+      description: 'تحديث كامل لجميع المكونات لتدعم الوضع المظلم بشكل متناسق ومريح للعين.',
+      icon: <Zap className="text-indigo-500" size={20} />
     },
     {
-      title: 'تحسين استقرار النظام',
-      description: 'حل مشكلة إعادة تحميل الصفحة المفاجئ أثناء عمليات الحفظ الكبيرة وتحسين دقة التعرف على الفصول.',
-      icon: <CheckCircle2 className="text-indigo-500" size={20} />
+      title: 'استقرار الحفظ التلقائي',
+      description: 'تحسين عملية حفظ الفصول الكبيرة مع شريط تقدم دقيق لضمان سلامة البيانات.',
+      icon: <CheckCircle2 className="text-emerald-500" size={20} />
     }
   ];
 
