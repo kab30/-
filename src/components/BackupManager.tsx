@@ -136,14 +136,14 @@ export const BackupManager: React.FC = () => {
   };
 
   return (
-    <div className="bg-white p-6 rounded-3xl border border-stone-200 shadow-sm space-y-6">
-      <div className="flex items-center gap-3 border-b border-stone-100 pb-4">
-        <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+    <div className="bg-bg-secondary p-6 rounded-3xl border border-border-primary shadow-sm space-y-6">
+      <div className="flex items-center gap-3 border-b border-border-primary pb-4">
+        <div className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl">
           <Database size={24} />
         </div>
         <div>
-          <h3 className="text-lg font-bold">إدارة النسخ الاحتياطي</h3>
-          <p className="text-sm text-stone-500">قم بتصدير أو استيراد كامل قاعدة البيانات</p>
+          <h3 className="text-lg font-bold text-text-primary">إدارة النسخ الاحتياطي</h3>
+          <p className="text-sm text-text-secondary">قم بتصدير أو استيراد كامل قاعدة البيانات</p>
         </div>
       </div>
 
@@ -151,13 +151,13 @@ export const BackupManager: React.FC = () => {
         <button
           onClick={exportData}
           disabled={isExporting || isImporting}
-          className="flex items-center justify-center gap-3 p-4 bg-stone-900 text-white rounded-2xl hover:bg-stone-800 transition-all disabled:opacity-50 shadow-lg shadow-stone-200"
+          className="flex items-center justify-center gap-3 p-4 bg-text-primary text-bg-primary rounded-2xl hover:opacity-90 transition-all disabled:opacity-50 shadow-lg shadow-text-primary/10"
         >
           {isExporting ? <Loader2 className="animate-spin" size={20} /> : <Download size={20} />}
           <span className="font-bold">تصدير نسخة احتياطية (JSON)</span>
         </button>
 
-        <label className="flex items-center justify-center gap-3 p-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-emerald-100">
+        <label className="flex items-center justify-center gap-3 p-4 bg-emerald-600 text-white rounded-2xl hover:bg-emerald-700 transition-all cursor-pointer disabled:opacity-50 shadow-lg shadow-emerald-500/20">
           {isImporting ? <Loader2 className="animate-spin" size={20} /> : <Upload size={20} />}
           <span className="font-bold">استيراد نسخة احتياطية</span>
           <input
@@ -178,11 +178,11 @@ export const BackupManager: React.FC = () => {
             exit={{ opacity: 0, height: 0 }}
             className="space-y-2"
           >
-            <div className="flex justify-between text-xs font-bold text-stone-500">
+            <div className="flex justify-between text-xs font-bold text-text-secondary">
               <span>التقدم</span>
               <span>{Math.round(progress)}%</span>
             </div>
-            <div className="w-full h-2 bg-stone-100 rounded-full overflow-hidden">
+            <div className="w-full h-2 bg-bg-primary rounded-full overflow-hidden">
               <motion.div
                 className="h-full bg-emerald-500"
                 initial={{ width: 0 }}
@@ -198,9 +198,9 @@ export const BackupManager: React.FC = () => {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 10 }}
             className={`p-4 rounded-2xl flex items-center gap-3 ${
-              status.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' :
-              status.type === 'error' ? 'bg-red-50 text-red-700 border border-red-100' :
-              'bg-blue-50 text-blue-700 border border-blue-100'
+              status.type === 'success' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' :
+              status.type === 'error' ? 'bg-red-500/10 text-red-500 border border-red-500/20' :
+              'bg-blue-500/10 text-blue-500 border border-blue-500/20'
             }`}
           >
             {status.type === 'success' ? <CheckCircle2 size={20} /> : <AlertCircle size={20} />}
@@ -209,9 +209,9 @@ export const BackupManager: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3">
-        <AlertCircle className="text-amber-600 shrink-0" size={20} />
-        <p className="text-xs text-amber-800 leading-relaxed">
+      <div className="p-4 bg-amber-500/10 rounded-2xl border border-amber-500/20 flex gap-3">
+        <AlertCircle className="text-amber-500 shrink-0" size={20} />
+        <p className="text-xs text-amber-500 leading-relaxed">
           <strong>ملاحظة:</strong> عملية الاستيراد ستقوم بتحديث الروايات والفصول الموجودة (Upsert). إذا كان هناك فصل بنفس الرقم في نفس الرواية، سيتم استبداله ببيانات النسخة الاحتياطية.
         </p>
       </div>

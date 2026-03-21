@@ -274,35 +274,35 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm" />
-      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-3xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} onClick={onClose} className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="relative w-full max-w-3xl bg-bg-secondary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-primary">
         
         {/* Header */}
-        <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0 z-10">
+        <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-secondary sticky top-0 z-10">
           <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-amber-100 text-amber-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-amber-500/10 text-amber-500 rounded-xl flex items-center justify-center">
               <Settings2 size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold">إدارة تنظيف الفصول</h3>
-              <p className="text-xs text-stone-400">يدعم الصينية والإنجليزية والعربية</p>
+              <h3 className="text-xl font-bold text-text-primary">إدارة تنظيف الفصول</h3>
+              <p className="text-xs text-text-secondary">يدعم الصينية والإنجليزية والعربية</p>
             </div>
           </div>
-          <button onClick={onClose} className="text-stone-400 hover:text-stone-600"><X size={24} /></button>
+          <button onClick={onClose} className="text-text-secondary hover:text-text-primary transition-colors"><X size={24} /></button>
         </div>
 
         {/* Tabs */}
-        <div className="flex border-b border-stone-100 px-6 bg-stone-50/50">
+        <div className="flex border-b border-border-primary px-6 bg-bg-primary/50">
           <button 
             onClick={() => setActiveTab('rules')}
-            className={`px-6 py-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 ${activeTab === 'rules' ? 'border-amber-600 text-amber-600' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+            className={`px-6 py-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 ${activeTab === 'rules' ? 'border-amber-500 text-amber-500' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
           >
             <ListFilter size={18} />
             <span>القواعد والتنظيف</span>
           </button>
           <button 
             onClick={() => setActiveTab('history')}
-            className={`px-6 py-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 ${activeTab === 'history' ? 'border-amber-600 text-amber-600' : 'border-transparent text-stone-400 hover:text-stone-600'}`}
+            className={`px-6 py-4 text-sm font-bold flex items-center gap-2 transition-all border-b-2 ${activeTab === 'history' ? 'border-amber-500 text-amber-500' : 'border-transparent text-text-secondary hover:text-text-primary'}`}
           >
             <History size={18} />
             <span>سجل العمليات</span>
@@ -313,13 +313,13 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
           {/* Messages */}
           <AnimatePresence>
             {error && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-red-50 text-red-600 p-4 rounded-xl flex items-center gap-3 text-sm font-bold">
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-red-500/10 text-red-500 p-4 rounded-xl flex items-center gap-3 text-sm font-bold">
                 <AlertCircle size={20} />
                 <span>{error}</span>
               </motion.div>
             )}
             {successMessage && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-emerald-50 text-emerald-600 p-4 rounded-xl flex items-center gap-3 text-sm font-bold">
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-emerald-500/10 text-emerald-500 p-4 rounded-xl flex items-center gap-3 text-sm font-bold">
                 <CheckCircle2 size={20} />
                 <span>{successMessage}</span>
               </motion.div>
@@ -329,20 +329,20 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
           {activeTab === 'rules' ? (
             <>
               {/* Add Rule Form */}
-              <div className="bg-stone-50 p-5 rounded-2xl border border-stone-200 space-y-4">
+              <div className="bg-bg-primary p-5 rounded-2xl border border-border-primary space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-stone-500">النص المراد حذفه (صيني/إنجليزي/عربي)</label>
-                    <input type="text" className="w-full p-3 bg-white border border-stone-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="مثال: www.69shuba.com" value={newRule.pattern} onChange={e => setNewRule({ ...newRule, pattern: e.target.value })} />
+                    <label className="text-xs font-bold text-text-secondary">النص المراد حذفه (صيني/إنجليزي/عربي)</label>
+                    <input type="text" className="w-full p-3 bg-bg-secondary border border-border-primary rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-text-primary" placeholder="مثال: www.69shuba.com" value={newRule.pattern} onChange={e => setNewRule({ ...newRule, pattern: e.target.value })} />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-xs font-bold text-stone-500">الاستبدال بـ (اختياري)</label>
-                    <input type="text" className="w-full p-3 bg-white border border-stone-200 rounded-xl outline-none focus:ring-2 focus:ring-amber-500" placeholder="نص البديل..." value={newRule.replacement} onChange={e => setNewRule({ ...newRule, replacement: e.target.value })} />
+                    <label className="text-xs font-bold text-text-secondary">الاستبدال بـ (اختياري)</label>
+                    <input type="text" className="w-full p-3 bg-bg-secondary border border-border-primary rounded-xl outline-none focus:ring-2 focus:ring-amber-500 text-text-primary" placeholder="نص البديل..." value={newRule.replacement} onChange={e => setNewRule({ ...newRule, replacement: e.target.value })} />
                   </div>
                 </div>
                 <div className="flex items-center justify-between">
-                  <label className="flex items-center gap-2 cursor-pointer text-sm text-stone-600">
-                    <input type="checkbox" className="w-4 h-4 text-amber-600 rounded" checked={newRule.is_regex} onChange={e => setNewRule({ ...newRule, is_regex: e.target.checked })} />
+                  <label className="flex items-center gap-2 cursor-pointer text-sm text-text-secondary">
+                    <input type="checkbox" className="w-4 h-4 text-amber-500 rounded border-border-primary bg-bg-secondary" checked={newRule.is_regex} onChange={e => setNewRule({ ...newRule, is_regex: e.target.checked })} />
                     استخدام Regex
                   </label>
                   <motion.button 
@@ -350,7 +350,7 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                     disabled={!newRule.pattern || isLoading} 
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
-                    className="bg-amber-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-amber-700 flex items-center gap-2 disabled:opacity-50 transition-all shadow-sm active:shadow-inner"
+                    className="bg-amber-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-amber-600 flex items-center gap-2 disabled:opacity-50 transition-all shadow-sm active:shadow-inner"
                   >
                     {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
                     إضافة قاعدة
@@ -360,21 +360,21 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
 
               {/* Rules List */}
               <div className="space-y-3">
-                <h4 className="font-bold text-stone-800">القواعد الحالية ({rules.length})</h4>
+                <h4 className="font-bold text-text-primary">القواعد الحالية ({rules.length})</h4>
                 <div className="space-y-2">
                   {rules.length === 0 ? (
-                    <div className="text-center py-8 text-stone-400 border-2 border-dashed border-stone-100 rounded-2xl text-sm">لا توجد قواعد مضافة حالياً</div>
+                    <div className="text-center py-8 text-text-secondary border-2 border-dashed border-border-primary rounded-2xl text-sm">لا توجد قواعد مضافة حالياً</div>
                   ) : (
                     rules.map(rule => (
-                      <div key={rule.id} className="flex items-center justify-between p-3 bg-white border border-stone-100 rounded-xl hover:border-amber-200 transition-all">
+                      <div key={rule.id} className="flex items-center justify-between p-3 bg-bg-secondary border border-border-primary rounded-xl hover:border-amber-500/50 transition-all">
                         <div className="truncate flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-mono text-sm font-bold text-stone-800">{rule.pattern}</span>
-                            {rule.is_regex && <span className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded font-bold">Regex</span>}
+                            <span className="font-mono text-sm font-bold text-text-primary">{rule.pattern}</span>
+                            {rule.is_regex && <span className="text-[10px] bg-amber-500/10 text-amber-500 px-1.5 py-0.5 rounded font-bold">Regex</span>}
                           </div>
-                          <span className="text-xs text-stone-400 block mt-1">بديل: <span className="text-stone-600 italic">{rule.replacement || '(حذف)'}</span></span>
+                          <span className="text-xs text-text-secondary block mt-1">بديل: <span className="text-text-primary italic">{rule.replacement || '(حذف)'}</span></span>
                         </div>
-                        <button onClick={() => handleDeleteRule(rule.id)} className="text-stone-300 hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
+                        <button onClick={() => handleDeleteRule(rule.id)} className="text-text-secondary hover:text-red-500 p-2 transition-colors"><Trash2 size={18} /></button>
                       </div>
                     ))
                   )}
@@ -383,9 +383,9 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
 
               {/* Comprehensive Cleaning Section */}
               {rules.length > 0 && (
-                <div className="pt-6 border-t border-stone-100 space-y-4">
-                  <div className="bg-emerald-50 p-5 rounded-2xl border border-emerald-100 space-y-4">
-                    <div className="flex items-center gap-3 text-emerald-800 font-bold">
+                <div className="pt-6 border-t border-border-primary space-y-4">
+                  <div className="bg-emerald-500/5 p-5 rounded-2xl border border-emerald-500/20 space-y-4">
+                    <div className="flex items-center gap-3 text-emerald-500 font-bold">
                       <Sparkles size={20} />
                       <span>التنظيف الشامل للمخزن</span>
                     </div>
@@ -394,7 +394,7 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                       <>
                         <div className="flex gap-2">
                           {(['original', 'arabic', 'both'] as const).map(t => (
-                            <button key={t} onClick={() => setCleanTarget(t)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cleanTarget === t ? 'bg-emerald-600 text-white' : 'bg-white text-emerald-600 border border-emerald-200'}`}>
+                            <button key={t} onClick={() => setCleanTarget(t)} className={`flex-1 py-2 rounded-lg text-xs font-bold transition-all ${cleanTarget === t ? 'bg-emerald-500 text-white' : 'bg-bg-secondary text-emerald-500 border border-emerald-500/20'}`}>
                               {t === 'original' ? 'الأصلي' : t === 'arabic' ? 'العربي' : 'الكل'}
                             </button>
                           ))}
@@ -404,7 +404,7 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                           disabled={isLoading}
                           whileHover={{ scale: 1.01 }}
                           whileTap={{ scale: 0.99 }}
-                          className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-2 shadow-lg shadow-emerald-100 disabled:opacity-50 transition-all"
+                          className="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold hover:bg-emerald-600 flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all"
                         >
                           {isLoading ? <Loader2 className="animate-spin" /> : <BarChart3 size={20} />}
                           تحليل الفصول واكتشاف الكلمات
@@ -413,20 +413,20 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                     )}
 
                     {isPreviewing && (
-                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-5 rounded-xl border border-emerald-200 space-y-4">
+                      <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-bg-secondary p-5 rounded-xl border border-emerald-500/20 space-y-4">
                         <div className="flex items-center justify-between">
-                          <h5 className="font-bold text-stone-800 flex items-center gap-2">
-                            <BarChart3 size={18} className="text-emerald-600" />
+                          <h5 className="font-bold text-text-primary flex items-center gap-2">
+                            <BarChart3 size={18} className="text-emerald-500" />
                             نتائج التحليل
                           </h5>
-                          <button onClick={() => setIsPreviewing(false)} className="text-xs text-stone-400 hover:text-stone-600">إلغاء</button>
+                          <button onClick={() => setIsPreviewing(false)} className="text-xs text-text-secondary hover:text-text-primary">إلغاء</button>
                         </div>
                         
                         <div className="space-y-2 max-h-40 overflow-y-auto pr-2">
                           {Object.entries(detectionStats).map(([pattern, count]) => (
-                            <div key={pattern} className="flex items-center justify-between text-sm p-2 bg-stone-50 rounded-lg">
-                              <span className="font-mono text-stone-600 truncate flex-1">{pattern}</span>
-                              <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${(count as number) > 0 ? 'bg-amber-100 text-amber-700' : 'bg-stone-200 text-stone-400'}`}>
+                            <div key={pattern} className="flex items-center justify-between text-sm p-2 bg-bg-primary rounded-lg">
+                              <span className="font-mono text-text-secondary truncate flex-1">{pattern}</span>
+                              <span className={`font-bold px-2 py-0.5 rounded-full text-xs ${(count as number) > 0 ? 'bg-amber-500/10 text-amber-500' : 'bg-bg-secondary text-text-secondary border border-border-primary'}`}>
                                 {count as number} اكتشاف
                               </span>
                             </div>
@@ -434,7 +434,7 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                         </div>
 
                         <div className="pt-2">
-                          <div className="flex items-center gap-2 text-amber-600 font-bold text-xs mb-3">
+                          <div className="flex items-center gap-2 text-amber-500 font-bold text-xs mb-3">
                             <AlertTriangle size={16} />
                             <span>سيتم حفظ نسخة احتياطية تلقائياً قبل البدء.</span>
                           </div>
@@ -442,7 +442,7 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                             onClick={startCleaning} 
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="w-full bg-emerald-600 text-white py-3 rounded-xl font-bold hover:bg-emerald-700 flex items-center justify-center gap-2 transition-all"
+                            className="w-full bg-emerald-500 text-white py-3 rounded-xl font-bold hover:bg-emerald-600 flex items-center justify-center gap-2 transition-all"
                           >
                             <Sparkles size={20} />
                             تأكيد وبدء التنظيف الشامل
@@ -453,15 +453,15 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
 
                     {isApplying && (
                       <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-bold text-emerald-700">
+                        <div className="flex justify-between text-xs font-bold text-emerald-500">
                           <div className="flex items-center gap-2">
                             <Loader2 size={14} className="animate-spin" />
                             <span>جاري معالجة الفصول...</span>
                           </div>
                           <span>{applyProgress.current} / {applyProgress.total}</span>
                         </div>
-                        <div className="h-2 bg-emerald-200 rounded-full overflow-hidden">
-                          <motion.div className="h-full bg-emerald-600" initial={{ width: 0 }} animate={{ width: `${(applyProgress.current / applyProgress.total) * 100}%` }} />
+                        <div className="h-2 bg-emerald-500/20 rounded-full overflow-hidden">
+                          <motion.div className="h-full bg-emerald-500" initial={{ width: 0 }} animate={{ width: `${(applyProgress.current / applyProgress.total) * 100}%` }} />
                         </div>
                       </div>
                     )}
@@ -473,22 +473,22 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
             /* History Tab */
             <div className="space-y-4">
               {logs.length === 0 ? (
-                <div className="text-center py-20 text-stone-400 border-2 border-dashed border-stone-100 rounded-3xl">
+                <div className="text-center py-20 text-text-secondary border-2 border-dashed border-border-primary rounded-3xl">
                   <History size={48} className="mx-auto mb-4 opacity-10" />
                   <p>لا توجد عمليات تنظيف مسجلة حالياً</p>
                 </div>
               ) : (
                 <div className="space-y-3">
                   {logs.map((log) => (
-                    <div key={log.id} className="bg-white border border-stone-200 rounded-2xl overflow-hidden shadow-sm hover:border-amber-200 transition-all">
-                      <div className="p-4 flex items-center justify-between bg-stone-50/50">
+                    <div key={log.id} className="bg-bg-secondary border border-border-primary rounded-2xl overflow-hidden shadow-sm hover:border-amber-500/50 transition-all">
+                      <div className="p-4 flex items-center justify-between bg-bg-primary/30">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-emerald-100 text-emerald-600 rounded-lg flex items-center justify-center">
+                          <div className="w-8 h-8 bg-emerald-500/10 text-emerald-500 rounded-lg flex items-center justify-center">
                             <Sparkles size={18} />
                           </div>
                           <div>
-                            <div className="text-sm font-bold text-stone-800">تنظيف شامل للمخزن</div>
-                            <div className="text-[10px] text-stone-400">{new Date(log.created_at).toLocaleString('ar-EG')}</div>
+                            <div className="text-sm font-bold text-text-primary">تنظيف شامل للمخزن</div>
+                            <div className="text-[10px] text-text-secondary">{new Date(log.created_at).toLocaleString('ar-EG')}</div>
                           </div>
                         </div>
                         <motion.button 
@@ -496,33 +496,33 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
                           disabled={isApplying}
                           whileHover={{ scale: 1.05 }}
                           whileTap={{ scale: 0.95 }}
-                          className="flex items-center gap-1.5 text-xs font-bold text-amber-600 hover:bg-amber-50 px-3 py-1.5 rounded-lg transition-all border border-amber-100"
+                          className="flex items-center gap-1.5 text-xs font-bold text-amber-500 hover:bg-amber-500/10 px-3 py-1.5 rounded-lg transition-all border border-amber-500/20"
                         >
                           <RotateCcw size={14} />
                           <span>تراجع عن العملية</span>
                         </motion.button>
                       </div>
-                      <div className="p-4 grid grid-cols-2 gap-4 border-t border-stone-100">
+                      <div className="p-4 grid grid-cols-2 gap-4 border-t border-border-primary">
                         <div className="space-y-1">
-                          <div className="text-[10px] font-bold text-stone-400 uppercase">الهدف</div>
-                          <div className="text-xs font-bold text-stone-600">
+                          <div className="text-[10px] font-bold text-text-secondary uppercase">الهدف</div>
+                          <div className="text-xs font-bold text-text-primary">
                             {log.target === 'original' ? 'النص الأصلي' : log.target === 'arabic' ? 'النص العربي' : 'الكل'}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-[10px] font-bold text-stone-400 uppercase">إجمالي الاكتشافات</div>
-                          <div className="text-xs font-bold text-emerald-600">
+                          <div className="text-[10px] font-bold text-text-secondary uppercase">إجمالي الاكتشافات</div>
+                          <div className="text-xs font-bold text-emerald-500">
                             {Object.values(log.stats).reduce((a, b) => (a as number) + (b as number), 0) as number} كلمة/جملة
                           </div>
                         </div>
                       </div>
                       <div className="px-4 pb-4">
-                        <div className="text-[10px] font-bold text-stone-400 uppercase mb-2">تفاصيل الاكتشافات</div>
+                        <div className="text-[10px] font-bold text-text-secondary uppercase mb-2">تفاصيل الاكتشافات</div>
                         <div className="flex flex-wrap gap-2">
                           {Object.entries(log.stats).map(([pattern, count]) => (
-                            <div key={pattern} className="text-[10px] bg-stone-100 text-stone-600 px-2 py-1 rounded-md flex items-center gap-1">
+                            <div key={pattern} className="text-[10px] bg-bg-primary text-text-secondary px-2 py-1 rounded-md flex items-center gap-1 border border-border-primary">
                               <span className="font-mono truncate max-w-[100px]">{pattern}</span>
-                              <span className="font-bold text-amber-600">({count})</span>
+                              <span className="font-bold text-amber-500">({count})</span>
                             </div>
                           ))}
                         </div>
@@ -536,5 +536,6 @@ export const CleaningRulesModal: React.FC<CleaningRulesModalProps> = ({ isOpen, 
         </div>
       </motion.div>
     </div>
+
   );
 };

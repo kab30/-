@@ -719,7 +719,7 @@ export const NovelDetail: React.FC = () => {
 
   if (!novel) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-stone-400">
+      <div className="flex flex-col items-center justify-center py-20 text-text-secondary">
         <Loader2 className="animate-spin mb-4" size={40} />
         <p>جاري تحميل الرواية...</p>
       </div>
@@ -735,7 +735,7 @@ export const NovelDetail: React.FC = () => {
       className="space-y-8"
     >
       {/* Novel Header Info */}
-      <div className="flex flex-col md:flex-row gap-8 items-start bg-white p-6 rounded-3xl border border-stone-200 shadow-sm">
+      <div className="flex flex-col md:flex-row gap-8 items-start bg-bg-primary p-6 rounded-3xl border border-border-primary shadow-sm">
         <img 
           src={novel.cover_url} 
           alt={novel.title} 
@@ -748,7 +748,7 @@ export const NovelDetail: React.FC = () => {
               <div className="flex items-center gap-2 flex-1">
                 <input 
                   type="text"
-                  className="text-3xl font-black text-stone-900 bg-stone-50 border border-stone-200 rounded-xl px-4 py-1 w-full outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="text-3xl font-black text-text-primary bg-bg-secondary border border-border-primary rounded-xl px-4 py-1 w-full outline-none focus:ring-2 focus:ring-emerald-500"
                   value={editedTitle}
                   onChange={(e) => setEditedTitle(e.target.value)}
                   autoFocus
@@ -761,7 +761,7 @@ export const NovelDetail: React.FC = () => {
                 </button>
                 <button 
                   onClick={() => setIsEditingTitle(false)}
-                  className="p-2 bg-stone-200 text-stone-600 rounded-xl hover:bg-stone-300 transition-colors"
+                  className="p-2 bg-bg-secondary text-text-secondary rounded-xl hover:bg-border-primary transition-colors"
                 >
                   <Trash2 size={20} className="rotate-45" />
                 </button>
@@ -769,19 +769,19 @@ export const NovelDetail: React.FC = () => {
             ) : (
               <div className="flex flex-col gap-1">
                 <div className="flex items-center gap-3">
-                  <h2 className="text-3xl font-black text-stone-900">{novel.title}</h2>
+                  <h2 className="text-3xl font-black text-text-primary">{novel.title}</h2>
                   <button 
                     onClick={() => {
                       setEditedTitle(novel.title);
                       setIsEditingTitle(true);
                     }}
-                    className="p-2 text-stone-400 hover:text-emerald-600 transition-colors"
+                    className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
                   >
                     <Edit size={20} />
                   </button>
                 </div>
                 {novel.original_title && (
-                  <p className="text-stone-500 font-medium">{novel.original_title}</p>
+                  <p className="text-text-secondary font-medium">{novel.original_title}</p>
                 )}
                 {novel.source_url && (
                   <a 
@@ -799,16 +799,16 @@ export const NovelDetail: React.FC = () => {
           </div>
 
           {/* Notes Section */}
-          <div className="mt-6 bg-stone-50 rounded-xl p-4 border border-stone-200">
+          <div className="mt-6 bg-bg-secondary rounded-xl p-4 border border-border-primary">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-stone-700 font-bold">
+              <div className="flex items-center gap-2 text-text-primary font-bold">
                 <StickyNote size={18} className="text-emerald-600" />
                 <span>ملاحظات الرواية</span>
               </div>
               {!isEditingNotes && (
                 <button 
                   onClick={() => setIsEditingNotes(true)}
-                  className="text-stone-400 hover:text-emerald-600 transition-colors"
+                  className="text-text-secondary hover:text-emerald-600 transition-colors"
                 >
                   <Edit size={16} />
                 </button>
@@ -818,7 +818,7 @@ export const NovelDetail: React.FC = () => {
             {isEditingNotes ? (
               <div className="space-y-3">
                 <textarea
-                  className="w-full bg-white border border-stone-200 rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px]"
+                  className="w-full bg-bg-primary border border-border-primary rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px] text-text-primary"
                   value={editedNotes}
                   onChange={(e) => setEditedNotes(e.target.value)}
                   placeholder="أضف ملاحظاتك هنا..."
@@ -826,7 +826,7 @@ export const NovelDetail: React.FC = () => {
                 <div className="flex justify-end gap-2">
                   <button 
                     onClick={() => setIsEditingNotes(false)}
-                    className="px-3 py-1.5 text-sm text-stone-500 hover:text-stone-700"
+                    className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
                   >
                     إلغاء
                   </button>
@@ -840,24 +840,24 @@ export const NovelDetail: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="text-stone-600 text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="text-text-secondary text-sm whitespace-pre-wrap leading-relaxed">
                 {novel.notes ? novel.notes : (
-                  <span className="text-stone-400 italic">لا توجد ملاحظات لهذه الرواية بعد.</span>
+                  <span className="text-text-secondary opacity-60 italic">لا توجد ملاحظات لهذه الرواية بعد.</span>
                 )}
               </div>
             )}
           </div>
 
           <div className="flex flex-wrap gap-3 mt-6">
-            <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600 flex items-center gap-2">
+            <div className="bg-bg-secondary px-4 py-2 rounded-lg text-sm font-medium text-text-secondary flex items-center gap-2">
               <span>الفصول المخزنة: {chapters.length}</span>
             </div>
             
             {isEditingTotalChapters ? (
-              <div className="flex items-center gap-2 bg-stone-100 px-2 py-1 rounded-lg">
+              <div className="flex items-center gap-2 bg-bg-secondary px-2 py-1 rounded-lg">
                 <input 
                   type="number"
-                  className="w-20 bg-white border border-stone-200 rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-emerald-500"
+                  className="w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-emerald-500 text-text-primary"
                   value={editedTotalChapters}
                   onChange={(e) => setEditedTotalChapters(e.target.value)}
                   placeholder="الإجمالي"
@@ -866,32 +866,32 @@ export const NovelDetail: React.FC = () => {
                 <button onClick={handleUpdateTotalChapters} className="text-emerald-600 hover:text-emerald-700">
                   <Check size={16} />
                 </button>
-                <button onClick={() => setIsEditingTotalChapters(false)} className="text-stone-400 hover:text-stone-600">
+                <button onClick={() => setIsEditingTotalChapters(false)} className="text-text-secondary hover:text-text-primary">
                   <Plus size={16} className="rotate-45" />
                 </button>
               </div>
             ) : (
-              <div className="bg-stone-100 px-4 py-2 rounded-lg text-sm font-medium text-stone-600 flex items-center gap-2">
+              <div className="bg-bg-secondary px-4 py-2 rounded-lg text-sm font-medium text-text-secondary flex items-center gap-2">
                 <span>إجمالي الفصول: {novel.total_chapters || 'غير محدد'}</span>
                 <button 
                   onClick={() => {
                     setEditedTotalChapters(novel.total_chapters?.toString() || '');
                     setIsEditingTotalChapters(true);
                   }}
-                  className="text-stone-400 hover:text-emerald-600 transition-colors"
+                  className="text-text-secondary hover:text-emerald-600 transition-colors"
                 >
                   <Edit size={14} />
                 </button>
               </div>
             )}
-            <div className="bg-emerald-100 px-4 py-2 rounded-lg text-sm font-medium text-emerald-700 flex items-center gap-2">
+            <div className="bg-emerald-500/10 px-4 py-2 rounded-lg text-sm font-medium text-emerald-500 flex items-center gap-2">
               <span>المترجمة: {translatedCount}</span>
               <span className="text-xs opacity-60">({Math.round((translatedCount / (novel.total_chapters || chapters.length || 1)) * 100)}%)</span>
             </div>
             {nextUntranslated && (
               <button 
                 onClick={handleGoToNextUntranslated}
-                className="bg-stone-900 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 transition-colors flex items-center gap-2"
+                className="bg-stone-900 dark:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 dark:hover:bg-emerald-700 transition-colors flex items-center gap-2"
               >
                 <span>الفصل التالي للترجمة: {nextUntranslated.chapter_number}</span>
                 <ChevronRight size={16} />
@@ -910,7 +910,7 @@ export const NovelDetail: React.FC = () => {
             </button>
             <button 
               onClick={checkMissingChapters}
-              className="bg-stone-100 text-stone-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-200 transition-colors flex items-center gap-2 border border-stone-200"
+              className="bg-bg-secondary text-text-secondary px-4 py-2 rounded-lg text-sm font-medium hover:bg-border-primary transition-colors flex items-center gap-2 border border-border-primary"
               title="فحص الفصول المفقودة"
             >
               <FileSearch size={16} />
@@ -922,7 +922,7 @@ export const NovelDetail: React.FC = () => {
             <motion.label 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-stone-900 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 transition-all shadow-lg"
+              className="flex items-center gap-2 bg-stone-900 dark:bg-emerald-600 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 dark:hover:bg-emerald-700 transition-all shadow-lg"
             >
               <Upload size={20} />
               <span>رفع ملف الرواية (TXT / EPUB)</span>
@@ -938,7 +938,7 @@ export const NovelDetail: React.FC = () => {
               onClick={() => setIsScraperOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-bg-primary text-text-primary px-6 py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm"
             >
               <Link2 size={20} className="text-emerald-600" />
               <span>سحب من رابط</span>
@@ -947,7 +947,7 @@ export const NovelDetail: React.FC = () => {
               onClick={() => setIsCleaningRulesOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-white text-stone-700 px-6 py-3 rounded-xl border border-stone-200 hover:bg-stone-50 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-bg-primary text-text-primary px-6 py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm"
               title="قواعد تنظيف الفصول"
             >
               <Settings2 size={20} className="text-amber-600" />
@@ -964,23 +964,23 @@ export const NovelDetail: React.FC = () => {
       </div>
 
       {/* Chapter Viewer */}
-      {chapters.length > 0 ? (
+      {chapters.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Chapter Sidebar/Selector */}
           <div className="lg:col-span-3 space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-stone-200 shadow-sm">
-              <h4 className="font-bold mb-4 flex items-center gap-2">
+            <div className="bg-bg-primary p-4 rounded-2xl border border-border-primary shadow-sm">
+              <h4 className="font-bold mb-4 flex items-center gap-2 text-text-primary">
                 <Book size={18} className="text-emerald-600" />
                 قائمة الفصول
               </h4>
               
               {/* Search Bar */}
               <div className="relative mb-4">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400" size={16} />
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 text-text-secondary" size={16} />
                 <input 
                   type="text"
                   placeholder="بحث في محتوى الفصول..."
-                  className="w-full p-2 pr-10 bg-stone-50 border border-stone-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
+                  className="w-full p-2 pr-10 bg-bg-secondary border border-border-primary rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none text-text-primary"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -1000,7 +1000,7 @@ export const NovelDetail: React.FC = () => {
                           "py-2 px-1 rounded-xl text-[10px] font-bold transition-all flex flex-col items-center justify-center gap-1 shadow-sm border",
                           copiedId === chap.id 
                             ? "bg-emerald-500 border-emerald-500 text-white scale-95" 
-                            : "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                            : "bg-emerald-500/10 text-emerald-500 border-emerald-500/20 hover:bg-emerald-500/20"
                         )}
                         title={`نسخ ${chap.title}`}
                       >
@@ -1012,32 +1012,32 @@ export const NovelDetail: React.FC = () => {
               )}
 
               {/* Filter Tabs */}
-              <div className="flex gap-1 mb-4 bg-stone-100 p-1 rounded-xl">
+              <div className="flex gap-1 mb-4 bg-bg-secondary p-1 rounded-xl">
                 <button 
                   onClick={() => setChapterFilter('all')}
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
-                    chapterFilter === 'all' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                    chapterFilter === 'all' ? "bg-bg-primary text-emerald-500 shadow-sm" : "text-text-secondary hover:text-text-primary"
                   )}
                 >الكل</button>
                 <button 
                   onClick={() => setChapterFilter('translated')}
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
-                    chapterFilter === 'translated' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                    chapterFilter === 'translated' ? "bg-bg-primary text-emerald-500 shadow-sm" : "text-text-secondary hover:text-text-primary"
                   )}
                 >المترجمة</button>
                 <button 
                   onClick={() => setChapterFilter('untranslated')}
                   className={cn(
                     "flex-1 py-1.5 text-xs font-bold rounded-lg transition-colors",
-                    chapterFilter === 'untranslated' ? "bg-white text-emerald-600 shadow-sm" : "text-stone-500 hover:text-stone-700"
+                    chapterFilter === 'untranslated' ? "bg-bg-primary text-emerald-500 shadow-sm" : "text-text-secondary hover:text-text-primary"
                   )}
                 >غير المترجمة</button>
               </div>
 
               <select 
-                className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
+                className="w-full p-3 bg-bg-secondary border border-border-primary rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-text-primary"
                 value={selectedChapter?.id || ''}
                 onChange={(e) => {
                   const chap = chapters.find(c => c.id === e.target.value);
@@ -1048,7 +1048,7 @@ export const NovelDetail: React.FC = () => {
                 }}
               >
                 {filteredChapters.map(chap => (
-                  <option key={chap.id} value={chap.id}>
+                  <option key={chap.id} value={chap.id} className="bg-bg-primary">
                     {chap.title || `الفصل ${chap.chapter_number}`}
                   </option>
                 ))}
@@ -1056,9 +1056,9 @@ export const NovelDetail: React.FC = () => {
             </div>
 
             <div className="space-y-4">
-              <div className="flex flex-col gap-3 p-3 bg-stone-100 rounded-2xl border border-stone-200">
+              <div className="flex flex-col gap-3 p-3 bg-bg-secondary rounded-2xl border border-border-primary">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold text-stone-500">إجراءات جماعية</span>
+                  <span className="text-xs font-bold text-text-secondary">إجراءات جماعية</span>
                   {selectedChapterIds.size > 0 && (
                     <button 
                       onClick={handleDeleteSelected}
@@ -1073,14 +1073,14 @@ export const NovelDetail: React.FC = () => {
                   <input 
                     type="number" 
                     placeholder="من" 
-                    className="w-full p-2 text-xs bg-white border border-stone-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full p-2 text-xs bg-bg-primary border border-border-primary rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-text-primary"
                     value={deleteRangeStart}
                     onChange={(e) => setDeleteRangeStart(e.target.value)}
                   />
                   <input 
                     type="number" 
                     placeholder="إلى" 
-                    className="w-full p-2 text-xs bg-white border border-stone-200 rounded-lg outline-none focus:ring-1 focus:ring-emerald-500"
+                    className="w-full p-2 text-xs bg-bg-primary border border-border-primary rounded-lg outline-none focus:ring-1 focus:ring-emerald-500 text-text-primary"
                     value={deleteRangeEnd}
                     onChange={(e) => setDeleteRangeEnd(e.target.value)}
                   />
@@ -1088,13 +1088,13 @@ export const NovelDetail: React.FC = () => {
                 <div className="flex gap-2">
                   <button 
                     onClick={handleApplyDeleteRangeSelection}
-                    className="flex-1 py-1.5 text-[10px] font-bold bg-white border border-stone-200 text-stone-600 rounded-lg hover:bg-stone-50 transition-colors"
+                    className="flex-1 py-1.5 text-[10px] font-bold bg-bg-primary border border-border-primary text-text-primary rounded-lg hover:bg-bg-secondary transition-colors"
                   >
                     تحديد النطاق
                   </button>
                   <button 
                     onClick={handleDeleteRange}
-                    className="flex-1 py-1.5 text-[10px] font-bold bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors"
+                    className="flex-1 py-1.5 text-[10px] font-bold bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
                   >
                     حذف النطاق
                   </button>
@@ -1102,21 +1102,21 @@ export const NovelDetail: React.FC = () => {
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setSelectedChapterIds(new Set(chapters.map(c => c.id)))}
-                    className="flex-1 py-1 text-[10px] font-bold text-emerald-600 hover:underline"
+                    className="flex-1 py-1 text-[10px] font-bold text-emerald-500 hover:underline"
                   >
                     تحديد الكل
                   </button>
                   <button 
                     onClick={() => setSelectedChapterIds(new Set())}
-                    className="flex-1 py-1 text-[10px] font-bold text-stone-400 hover:underline"
+                    className="flex-1 py-1 text-[10px] font-bold text-text-secondary hover:underline"
                   >
                     إلغاء التحديد
                   </button>
                 </div>
               </div>
 
-              <div className="hidden lg:block max-h-[500px] overflow-y-auto bg-white rounded-2xl border border-stone-200 shadow-sm">
-                <div className="p-3 text-xs font-bold text-stone-400 border-b border-stone-100 flex justify-between items-center">
+              <div className="hidden lg:block max-h-[500px] overflow-y-auto bg-bg-primary rounded-2xl border border-border-primary shadow-sm">
+                <div className="p-3 text-xs font-bold text-text-secondary border-b border-border-primary flex justify-between items-center">
                   <span>{searchQuery ? `نتائج البحث: ${filteredChapters.length}` : 'اسحب لإعادة الترتيب'}</span>
                   {!searchQuery && <GripVertical size={14} />}
                 </div>
@@ -1143,9 +1143,9 @@ export const NovelDetail: React.FC = () => {
                         handleReorderChapters(newChapters);
                       }}
                       className={cn(
-                        "w-full text-right p-4 border-b border-stone-100 last:border-0 hover:bg-stone-50 transition-colors text-sm flex items-center gap-3 group",
+                        "w-full text-right p-4 border-b border-border-primary last:border-0 hover:bg-bg-secondary transition-colors text-sm flex items-center gap-3 group",
                         !searchQuery && "cursor-move",
-                        selectedChapter?.id === chap.id ? "bg-emerald-50 text-emerald-700 font-bold border-r-4 border-r-emerald-600" : "text-stone-600"
+                        selectedChapter?.id === chap.id ? "bg-emerald-500/10 text-emerald-500 font-bold border-r-4 border-r-emerald-600" : "text-text-secondary"
                       )}
                     >
                       <div 
@@ -1155,7 +1155,7 @@ export const NovelDetail: React.FC = () => {
                         }}
                         className={cn(
                           "w-4 h-4 rounded border flex items-center justify-center transition-colors cursor-pointer shrink-0",
-                          selectedChapterIds.has(chap.id) ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300 bg-white"
+                          selectedChapterIds.has(chap.id) ? "bg-emerald-500 border-emerald-500 text-white" : "border-border-primary bg-bg-primary"
                         )}
                       >
                         {selectedChapterIds.has(chap.id) && <Check size={10} />}
@@ -1172,11 +1172,11 @@ export const NovelDetail: React.FC = () => {
                           <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-sm shadow-emerald-200 shrink-0" title="مترجم" />
                         )}
                       </div>
-                      {!searchQuery && <GripVertical size={14} className="text-stone-300 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
+                      {!searchQuery && <GripVertical size={14} className="text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity shrink-0" />}
                     </div>
                   ))}
                 {filteredChapters.length === 0 && (
-                  <div className="p-8 text-center text-stone-400 text-sm">
+                  <div className="p-8 text-center text-text-secondary text-sm">
                     لا توجد نتائج للبحث
                   </div>
                 )}
@@ -1188,13 +1188,13 @@ export const NovelDetail: React.FC = () => {
         {/* Content Area */}
           <div className="lg:col-span-9 space-y-6">
             {selectedChapter && (
-              <div className="bg-white rounded-3xl border border-stone-200 shadow-sm overflow-hidden">
-                <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-stone-50/50">
-                  <h3 className="text-xl font-bold text-stone-800">{selectedChapter.title}</h3>
+              <div className="bg-bg-primary rounded-3xl border border-border-primary shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-secondary/50">
+                  <h3 className="text-xl font-bold text-text-primary">{selectedChapter.title}</h3>
                   <div className="flex gap-2">
                     <button 
                       onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
-                      className="p-2 bg-white border border-stone-200 rounded-lg text-stone-600 hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
+                      className="p-2 bg-bg-primary border border-border-primary rounded-lg text-text-primary hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
                       title="نسخ النص الأصلي"
                     >
                       <Copy size={18} />
@@ -1202,7 +1202,7 @@ export const NovelDetail: React.FC = () => {
                     </button>
                     <button 
                       onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
-                      className="p-2 bg-white border border-stone-200 rounded-lg text-stone-600 hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
+                      className="p-2 bg-bg-primary border border-border-primary rounded-lg text-text-primary hover:text-emerald-600 transition-colors shadow-sm flex items-center gap-2"
                       title="نسخ الترجمة"
                     >
                       <Copy size={18} />
@@ -1222,14 +1222,14 @@ export const NovelDetail: React.FC = () => {
                 </div>
 
                 {!isOnline && (
-                  <div className="bg-amber-50 px-6 py-2 border-b border-amber-100 flex items-center gap-2 text-amber-700 text-xs font-bold">
+                  <div className="bg-amber-500/10 px-6 py-2 border-b border-amber-500/20 flex items-center gap-2 text-amber-600 text-xs font-bold">
                     <WifiOff size={14} />
                     <span>أنت تعمل بدون إنترنت. سيتم حفظ التغييرات محلياً ومزامنتها لاحقاً.</span>
                   </div>
                 )}
 
                 {Object.keys(pendingSync).length > 0 && isOnline && (
-                  <div className="bg-emerald-50 px-6 py-2 border-b border-emerald-100 flex items-center justify-between text-emerald-700 text-xs font-bold">
+                  <div className="bg-emerald-500/10 px-6 py-2 border-b border-emerald-500/20 flex items-center justify-between text-emerald-500 text-xs font-bold">
                     <div className="flex items-center gap-2">
                       <CloudUpload size={14} />
                       <span>لديك {Object.keys(pendingSync).length} تعديلات بانتظار المزامنة.</span>
@@ -1240,23 +1240,23 @@ export const NovelDetail: React.FC = () => {
                   </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-stone-100">
+                <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x md:divide-x-reverse divide-border-primary">
                   {/* Original Text */}
                   <div className="p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
                         <Languages size={14} />
                         النص الأصلي
                       </span>
                       <button 
                         onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
-                        className="p-1.5 text-stone-400 hover:text-emerald-600 transition-colors"
+                        className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
                         title="نسخ النص الأصلي"
                       >
                         <Copy size={14} />
                       </button>
                     </div>
-                    <div className="prose prose-stone max-w-none h-[600px] overflow-y-auto p-4 bg-stone-50 rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono">
+                    <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary">
                       {selectedChapter.content_original}
                     </div>
                   </div>
@@ -1264,20 +1264,20 @@ export const NovelDetail: React.FC = () => {
                   {/* Arabic Translation */}
                   <div className="p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-stone-400 flex items-center gap-1">
+                      <span className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
                         <Languages size={14} />
                         الترجمة العربية
                       </span>
                       <button 
                         onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
-                        className="p-1.5 text-stone-400 hover:text-emerald-600 transition-colors"
+                        className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
                         title="نسخ الترجمة"
                       >
                         <Copy size={14} />
                       </button>
                     </div>
                     <textarea
-                      className="w-full h-[600px] p-4 bg-white border border-stone-200 rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+                      className="w-full h-[600px] p-4 bg-bg-primary border border-border-primary rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-text-primary"
                       placeholder="أدخل الترجمة العربية هنا..."
                       value={arabicContent}
                       onChange={(e) => setArabicContent(e.target.value)}
@@ -1288,12 +1288,260 @@ export const NovelDetail: React.FC = () => {
             )}
           </div>
         </div>
-      ) : (
-        <div className="bg-white p-20 rounded-3xl border-2 border-dashed border-stone-200 flex flex-col items-center justify-center text-stone-400">
-          <Upload size={48} className="mb-4 opacity-20" />
-          <p className="text-lg">لا توجد فصول لهذه الرواية بعد. قم برفع ملف TXT للبدء.</p>
-        </div>
       )}
+
+      {/* Check Missing Chapters Modal */}
+      <AnimatePresence>
+        {showCheckModal && checkResults && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowCheckModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-bg-primary rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-border-primary flex items-center justify-between">
+                <h3 className="text-xl font-bold text-text-primary">نتائج فحص الفصول</h3>
+                <button onClick={() => setShowCheckModal(false)} className="text-text-secondary hover:text-text-primary">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                {checkResults.missing.length === 0 ? (
+                  <div className="flex flex-col items-center text-center space-y-4">
+                    <div className="w-16 h-16 bg-emerald-500/10 text-emerald-500 rounded-full flex items-center justify-center">
+                      <CheckCircle2 size={32} />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-text-primary">التسلسل مكتمل!</h4>
+                      <p className="text-sm text-text-secondary">لا توجد فصول مفقودة في التسلسل من 1 إلى {checkResults.max}.</p>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-3 text-amber-600">
+                      <AlertCircle size={24} />
+                      <h4 className="text-lg font-bold">تم العثور على نقص</h4>
+                    </div>
+                    <p className="text-sm text-text-secondary">
+                      هناك <span className="font-bold text-text-primary">{checkResults.missing.length}</span> فصل مفقود في التسلسل:
+                    </p>
+                    <div className="bg-bg-secondary p-4 rounded-xl border border-border-primary max-h-40 overflow-y-auto">
+                      <p className="font-mono text-sm text-text-secondary leading-relaxed">
+                        {checkResults.missing.join(', ')}
+                      </p>
+                    </div>
+                    <p className="text-xs text-text-secondary opacity-60 italic">
+                      * الفحص يعتمد على أرقام الفصول من 1 إلى {checkResults.max}.
+                    </p>
+                  </div>
+                )}
+
+                <button 
+                  onClick={() => setShowCheckModal(false)}
+                  className="w-full bg-stone-900 dark:bg-emerald-600 text-white py-4 rounded-xl font-bold hover:bg-stone-800 dark:hover:bg-emerald-700 transition-all"
+                >
+                  إغلاق
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Download Range Modal */}
+      <AnimatePresence>
+        {showDownloadModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowDownloadModal(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-md bg-bg-primary rounded-3xl shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 border-b border-border-primary flex items-center justify-between">
+                <h3 className="text-xl font-bold text-text-primary">تحميل الفصول المترجمة</h3>
+                <button onClick={() => setShowDownloadModal(false)} className="text-text-secondary hover:text-text-primary">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+              <div className="p-6 space-y-6">
+                <p className="text-sm text-text-secondary">اختر نطاق الفصول التي تريد تحميلها في ملف نصي واحد.</p>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-text-secondary uppercase">من فصل</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-3 bg-bg-secondary border border-border-primary rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-text-primary"
+                      value={downloadRangeStart}
+                      onChange={(e) => setDownloadRangeStart(e.target.value)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-text-secondary uppercase">إلى فصل</label>
+                    <input 
+                      type="number" 
+                      className="w-full p-3 bg-bg-secondary border border-border-primary rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none text-text-primary"
+                      value={downloadRangeEnd}
+                      onChange={(e) => setDownloadRangeEnd(e.target.value)}
+                    />
+                  </div>
+                </div>
+
+                <div className="bg-emerald-500/10 p-4 rounded-xl border border-emerald-500/20">
+                  <p className="text-xs text-emerald-500 font-medium">
+                    سيتم تحميل الفصول المترجمة فقط ضمن هذا النطاق.
+                  </p>
+                </div>
+
+                <button 
+                  onClick={handleDownloadTranslated}
+                  className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/10 flex items-center justify-center gap-2"
+                >
+                  <Download size={20} />
+                  تحميل الملف
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Upload Preview Modal */}
+      <AnimatePresence>
+        {showUploadPreview && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowUploadPreview(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-2xl bg-bg-primary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-primary sticky top-0 z-10">
+                <div>
+                  <h3 className="text-xl font-bold text-text-primary">معاينة الفصول المستخرجة</h3>
+                  <p className="text-sm text-text-secondary">تم العثور على {pendingChapters.length} فصل</p>
+                </div>
+                <button onClick={() => setShowUploadPreview(false)} className="text-text-secondary hover:text-text-primary">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+
+              <div className="p-6 bg-bg-secondary border-b border-border-primary space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
+                  <div className="flex-1 space-y-1">
+                    <label className="text-xs font-bold text-text-secondary uppercase">تحديد نطاق (من - إلى)</label>
+                    <div className="flex items-center gap-2">
+                      <input 
+                        type="number" 
+                        placeholder="من"
+                        className="w-20 p-2 bg-bg-primary border border-border-primary rounded-lg text-sm text-text-primary"
+                        value={rangeStart}
+                        onChange={(e) => setRangeStart(e.target.value)}
+                      />
+                      <input 
+                        type="number" 
+                        placeholder="إلى"
+                        className="w-20 p-2 bg-bg-primary border border-border-primary rounded-lg text-sm text-text-primary"
+                        value={rangeEnd}
+                        onChange={(e) => setRangeEnd(e.target.value)}
+                      />
+                      <button 
+                        onClick={handleApplyRange}
+                        className="px-4 py-2 bg-stone-900 dark:bg-emerald-600 text-white rounded-lg text-sm font-bold hover:bg-stone-800 dark:hover:bg-emerald-700"
+                      >
+                        تطبيق النطاق
+                      </button>
+                    </div>
+                  </div>
+                  <div className="text-right flex flex-col items-end gap-1">
+                    <p className="text-sm font-bold text-text-secondary">المحدد: {selectedPendingIndices.size}</p>
+                    <div className="flex gap-2">
+                      <button 
+                        onClick={() => setSelectedPendingIndices(new Set(pendingChapters.map((_, i) => i)))}
+                        className="text-xs text-emerald-500 font-bold hover:underline"
+                      >
+                        تحديد الكل
+                      </button>
+                      <button 
+                        onClick={() => setSelectedPendingIndices(new Set())}
+                        className="text-xs text-red-500 font-bold hover:underline"
+                      >
+                        إلغاء الكل
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {pendingChapters.map((chapter, idx) => (
+                  <div 
+                    key={idx}
+                    onClick={() => togglePendingSelection(idx)}
+                    className={cn(
+                      "flex items-center gap-4 p-3 rounded-xl border transition-all cursor-pointer",
+                      selectedPendingIndices.has(idx) 
+                        ? "bg-emerald-500/10 border-emerald-500/20" 
+                        : "bg-bg-primary border-border-primary hover:border-text-secondary",
+                      chapter.isDuplicate && "opacity-60"
+                    )}
+                  >
+                    <div className={cn(
+                      "w-5 h-5 rounded border flex items-center justify-center",
+                      selectedPendingIndices.has(idx) ? "bg-emerald-500 border-emerald-500 text-white" : "border-border-primary"
+                    )}>
+                      {selectedPendingIndices.has(idx) && <Check size={12} />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-xs font-bold text-text-secondary opacity-60">#{chapter.chapter_number}</span>
+                        <span className="font-bold text-text-primary">{chapter.title}</span>
+                      </div>
+                      {chapter.isDuplicate && (
+                        <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">موجود مسبقاً</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="p-6 border-t border-border-primary bg-bg-primary">
+                <button 
+                  onClick={handleConfirmUpload}
+                  disabled={isUploading || selectedPendingIndices.size === 0}
+                  className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                >
+                  {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} />}
+                  حفظ الفصول المختارة ({selectedPendingIndices.size})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Scraper Modal */}
       <AnimatePresence>
@@ -1316,259 +1564,6 @@ export const NovelDetail: React.FC = () => {
             onClose={() => setIsCleaningRulesOpen(false)}
             novelId={novel.id}
           />
-        )}
-      </AnimatePresence>
-
-      {/* Check Missing Chapters Modal */}
-      <AnimatePresence>
-        {showCheckModal && checkResults && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowCheckModal(false)}
-              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                <h3 className="text-xl font-bold">نتائج فحص الفصول</h3>
-                <button onClick={() => setShowCheckModal(false)} className="text-stone-400 hover:text-stone-600">
-                  <Plus size={24} className="rotate-45" />
-                </button>
-              </div>
-              <div className="p-6 space-y-6">
-                {checkResults.missing.length === 0 ? (
-                  <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center">
-                      <CheckCircle2 size={32} />
-                    </div>
-                    <div>
-                      <h4 className="text-lg font-bold text-stone-800">التسلسل مكتمل!</h4>
-                      <p className="text-sm text-stone-500">لا توجد فصول مفقودة في التسلسل من 1 إلى {checkResults.max}.</p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-3 text-amber-600">
-                      <AlertCircle size={24} />
-                      <h4 className="text-lg font-bold">تم العثور على نقص</h4>
-                    </div>
-                    <p className="text-sm text-stone-600">
-                      هناك <span className="font-bold text-stone-900">{checkResults.missing.length}</span> فصل مفقود في التسلسل:
-                    </p>
-                    <div className="bg-stone-50 p-4 rounded-xl border border-stone-100 max-h-40 overflow-y-auto">
-                      <p className="font-mono text-sm text-stone-600 leading-relaxed">
-                        {checkResults.missing.join(', ')}
-                      </p>
-                    </div>
-                    <p className="text-xs text-stone-400 italic">
-                      * الفحص يعتمد على أرقام الفصول من 1 إلى {checkResults.max}.
-                    </p>
-                  </div>
-                )}
-
-                <button 
-                  onClick={() => setShowCheckModal(false)}
-                  className="w-full bg-stone-900 text-white py-4 rounded-xl font-bold hover:bg-stone-800 transition-all"
-                >
-                  إغلاق
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Download Range Modal */}
-      <AnimatePresence>
-        {showDownloadModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowDownloadModal(false)}
-              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden"
-            >
-              <div className="p-6 border-b border-stone-100 flex items-center justify-between">
-                <h3 className="text-xl font-bold">تحميل الفصول المترجمة</h3>
-                <button onClick={() => setShowDownloadModal(false)} className="text-stone-400 hover:text-stone-600">
-                  <Plus size={24} className="rotate-45" />
-                </button>
-              </div>
-              <div className="p-6 space-y-6">
-                <p className="text-sm text-stone-500">اختر نطاق الفصول التي تريد تحميلها في ملف نصي واحد.</p>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-stone-600 uppercase">من فصل</label>
-                    <input 
-                      type="number" 
-                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                      value={downloadRangeStart}
-                      onChange={(e) => setDownloadRangeStart(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-stone-600 uppercase">إلى فصل</label>
-                    <input 
-                      type="number" 
-                      className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none"
-                      value={downloadRangeEnd}
-                      onChange={(e) => setDownloadRangeEnd(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                <div className="bg-emerald-50 p-4 rounded-xl border border-emerald-100">
-                  <p className="text-xs text-emerald-700 font-medium">
-                    سيتم تحميل الفصول المترجمة فقط ضمن هذا النطاق.
-                  </p>
-                </div>
-
-                <button 
-                  onClick={handleDownloadTranslated}
-                  className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
-                >
-                  <Download size={20} />
-                  تحميل الملف
-                </button>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      {/* Upload Preview Modal */}
-      <AnimatePresence>
-        {showUploadPreview && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowUploadPreview(false)}
-              className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
-            >
-              <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0 z-10">
-                <div>
-                  <h3 className="text-xl font-bold">معاينة الفصول المستخرجة</h3>
-                  <p className="text-sm text-stone-500">تم العثور على {pendingChapters.length} فصل</p>
-                </div>
-                <button onClick={() => setShowUploadPreview(false)} className="text-stone-400 hover:text-stone-600">
-                  <Plus size={24} className="rotate-45" />
-                </button>
-              </div>
-
-              <div className="p-6 bg-stone-50 border-b border-stone-100 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-                  <div className="flex-1 space-y-1">
-                    <label className="text-xs font-bold text-stone-500 uppercase">تحديد نطاق (من - إلى)</label>
-                    <div className="flex items-center gap-2">
-                      <input 
-                        type="number" 
-                        placeholder="من"
-                        className="w-20 p-2 bg-white border border-stone-200 rounded-lg text-sm"
-                        value={rangeStart}
-                        onChange={(e) => setRangeStart(e.target.value)}
-                      />
-                      <input 
-                        type="number" 
-                        placeholder="إلى"
-                        className="w-20 p-2 bg-white border border-stone-200 rounded-lg text-sm"
-                        value={rangeEnd}
-                        onChange={(e) => setRangeEnd(e.target.value)}
-                      />
-                      <button 
-                        onClick={handleApplyRange}
-                        className="px-4 py-2 bg-stone-800 text-white rounded-lg text-sm font-bold hover:bg-stone-900"
-                      >
-                        تطبيق النطاق
-                      </button>
-                    </div>
-                  </div>
-                  <div className="text-right flex flex-col items-end gap-1">
-                    <p className="text-sm font-bold text-stone-600">المحدد: {selectedPendingIndices.size}</p>
-                    <div className="flex gap-2">
-                      <button 
-                        onClick={() => setSelectedPendingIndices(new Set(pendingChapters.map((_, i) => i)))}
-                        className="text-xs text-emerald-600 font-bold hover:underline"
-                      >
-                        تحديد الكل
-                      </button>
-                      <button 
-                        onClick={() => setSelectedPendingIndices(new Set())}
-                        className="text-xs text-red-600 font-bold hover:underline"
-                      >
-                        إلغاء الكل
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-y-auto p-4 space-y-2">
-                {pendingChapters.map((chapter, idx) => (
-                  <div 
-                    key={idx}
-                    onClick={() => togglePendingSelection(idx)}
-                    className={cn(
-                      "flex items-center gap-4 p-3 rounded-xl border transition-all cursor-pointer",
-                      selectedPendingIndices.has(idx) 
-                        ? "bg-emerald-50 border-emerald-200" 
-                        : "bg-white border-stone-100 hover:border-stone-200",
-                      chapter.isDuplicate && "opacity-60"
-                    )}
-                  >
-                    <div className={cn(
-                      "w-5 h-5 rounded border flex items-center justify-center",
-                      selectedPendingIndices.has(idx) ? "bg-emerald-500 border-emerald-500 text-white" : "border-stone-300"
-                    )}>
-                      {selectedPendingIndices.has(idx) && <Check size={12} />}
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs font-bold text-stone-400">#{chapter.chapter_number}</span>
-                        <span className="font-bold text-stone-700">{chapter.title}</span>
-                      </div>
-                      {chapter.isDuplicate && (
-                        <span className="text-[10px] font-bold text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">موجود مسبقاً</span>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="p-6 border-t border-stone-100 bg-white">
-                <button 
-                  onClick={handleConfirmUpload}
-                  disabled={isUploading || selectedPendingIndices.size === 0}
-                  className="w-full bg-emerald-600 text-white py-4 rounded-xl font-bold text-lg hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
-                >
-                  {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} />}
-                  حفظ الفصول المختارة ({selectedPendingIndices.size})
-                </button>
-              </div>
-            </motion.div>
-          </div>
         )}
       </AnimatePresence>
     </motion.div>

@@ -10,7 +10,8 @@ import {
   Save, 
   AlertCircle,
   ChevronRight,
-  Book
+  Book,
+  Copy
 } from 'lucide-react';
 import { supabase, type Novel } from '../supabase';
 
@@ -115,6 +116,9 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       
       if (wordCount < 400) return; // Skip if less than 400 words/chars
 
+      if (preferredLanguage === 'arabic' && !hasArabic) return;
+      if (preferredLanguage === 'chinese' && hasArabic) return;
+
       const lines = trimmed.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       if (lines.length === 0) return;
       
@@ -169,6 +173,8 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
   };
 
   const [saveProgress, setSaveProgress] = useState({ current: 0, total: 0 });
+  const [showPromptGuide, setShowPromptGuide] = useState(false);
+  const [preferredLanguage, setPreferredLanguage] = useState<'both' | 'arabic' | 'chinese'>('both');
 
   const handleSave = async (e: React.MouseEvent) => {
     console.log('Save button clicked!');
@@ -241,45 +247,55 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="absolute inset-0 bg-stone-900/60 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
       />
       
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.9, opacity: 0, y: 20 }}
-        className="relative w-full max-w-4xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+        className="relative w-full max-w-4xl bg-bg-secondary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] border border-border-primary"
       >
         {/* Header */}
-        <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0 z-10">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-blue-100 text-blue-600 rounded-2xl flex items-center justify-center shadow-inner">
-              <Sparkles size={28} />
+        <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-secondary sticky top-0 z-10">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-blue-500/10 text-blue-500 rounded-2xl flex items-center justify-center shadow-inner">
+                <Sparkles size={28} />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-text-primary">جلب من Gemini</h3>
+                <p className="text-xs text-text-secondary font-medium">استخراج الفصول المترجمة من روابط المشاركة</p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-xl font-bold text-stone-900">جلب من Gemini</h3>
-              <p className="text-xs text-stone-400 font-medium">استخراج الفصول المترجمة من روابط المشاركة</p>
+            <div className="flex items-center gap-2">
+              <button 
+                type="button" 
+                onClick={() => setShowPromptGuide(true)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-blue-500/10 text-blue-500 rounded-xl text-xs font-bold hover:bg-blue-500/20 transition-all"
+              >
+                <Sparkles size={14} />
+                <span>برومت Gemini</span>
+              </button>
+              <button type="button" onClick={onClose} className="p-2 hover:bg-bg-primary rounded-full transition-colors text-text-secondary">
+                <X size={24} />
+              </button>
             </div>
-          </div>
-          <button type="button" onClick={onClose} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
-            <X size={24} />
-          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Tabs */}
-          <div className="flex p-1 bg-stone-100 rounded-2xl">
+          <div className="flex p-1 bg-bg-primary rounded-2xl">
             <button 
               type="button"
               onClick={() => setImportMode('url')}
-              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'url' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'url' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
             >
               عبر الرابط
             </button>
             <button 
               type="button"
               onClick={() => setImportMode('manual')}
-              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'manual' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+              className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${importMode === 'manual' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
             >
               لصق يدوي
             </button>
@@ -288,14 +304,14 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           {/* URL Input */}
           {importMode === 'url' ? (
             <div className="space-y-3 animate-in fade-in duration-300">
-              <label className="text-sm font-bold text-stone-600 flex items-center gap-2">
+              <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
                 <Link2 size={16} className="text-blue-500" />
                 رابط مشاركة Gemini
               </label>
               <div className="flex gap-3">
                 <input 
                   type="url"
-                  className="flex-1 p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium"
+                  className="flex-1 p-4 bg-bg-primary border border-border-primary rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium text-text-primary"
                   placeholder="https://gemini.google.com/share/..."
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -304,7 +320,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                   type="button"
                   onClick={handleFetch}
                   disabled={isLoading || !url}
-                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50 flex items-center gap-2"
+                  className="bg-blue-600 text-white px-8 py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 flex items-center gap-2"
                 >
                   {isLoading ? <Loader2 className="animate-spin" size={20} /> : <ChevronRight size={20} />}
                   <span>جلب</span>
@@ -313,12 +329,36 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
             </div>
           ) : (
             <div className="space-y-3 animate-in fade-in duration-300">
-              <label className="text-sm font-bold text-stone-600 flex items-center gap-2">
+              <label className="text-sm font-bold text-text-secondary flex items-center gap-2">
                 <Save size={16} className="text-blue-500" />
                 الصق محتوى صفحة Gemini هنا
               </label>
+              <div className="flex items-center gap-2 bg-bg-primary p-1 rounded-xl border border-border-primary">
+                <button 
+                  type="button"
+                  onClick={() => setPreferredLanguage('both')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${preferredLanguage === 'both' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
+                >
+                  الكل
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setPreferredLanguage('arabic')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${preferredLanguage === 'arabic' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
+                >
+                  العربية فقط
+                </button>
+                <button 
+                  type="button"
+                  onClick={() => setPreferredLanguage('chinese')}
+                  className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${preferredLanguage === 'chinese' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
+                >
+                  الصينية فقط
+                </button>
+              </div>
+
               <textarea 
-                className="w-full h-40 p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium resize-none"
+                className="w-full h-40 p-4 bg-bg-primary border border-border-primary rounded-2xl focus:ring-2 focus:ring-blue-500 outline-none transition-all font-medium resize-none text-text-primary"
                 placeholder="انسخ محتوى المحادثة بالكامل من Gemini والصقه هنا..."
                 value={manualText}
                 onChange={(e) => setManualText(e.target.value)}
@@ -327,7 +367,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                 type="button"
                 onClick={handleManualParse}
                 disabled={!manualText}
-                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 disabled:opacity-50"
+                className="w-full bg-blue-600 text-white py-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
               >
                 تحليل النص المستخرج
               </button>
@@ -335,7 +375,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           )}
 
           {error && (
-            <div className="bg-red-50 text-red-600 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-100">
+            <div className="bg-red-500/10 text-red-500 p-4 rounded-2xl flex items-center gap-3 text-sm font-bold border border-red-500/20">
               <AlertCircle size={20} />
               <span>{error}</span>
             </div>
@@ -347,27 +387,27 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
               {/* Filters & Actions */}
               <div className="space-y-4">
                 <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-2 bg-stone-100 p-1 rounded-xl">
+                  <div className="flex items-center gap-2 bg-bg-primary p-1 rounded-xl">
                     <button 
                       type="button"
                       onClick={() => setFilterType('all')}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'all' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
                     >
                       الكل
                     </button>
                     <button 
                       type="button"
                       onClick={() => setFilterType('arabic')}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'arabic' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'arabic' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
                     >
-                      العربية فقط
+                      العربية
                     </button>
                     <button 
                       type="button"
                       onClick={() => setFilterType('original')}
-                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'original' ? 'bg-white shadow-sm text-blue-600' : 'text-stone-500 hover:text-stone-700'}`}
+                      className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${filterType === 'original' ? 'bg-bg-secondary shadow-sm text-blue-500' : 'text-text-secondary hover:text-text-primary'}`}
                     >
-                      الأصلية (الصينية)
+                      الصينية
                     </button>
                   </div>
 
@@ -382,11 +422,11 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                         });
                         setSelectedIndices(newSelection);
                       }}
-                      className="text-xs font-bold text-blue-600 hover:underline"
+                      className="text-xs font-bold text-blue-500 hover:underline"
                     >
                       تحديد المفلتر
                     </button>
-                    <span className="text-stone-300">|</span>
+                    <span className="text-border-primary">|</span>
                     <button 
                       type="button"
                       onClick={() => {
@@ -397,32 +437,32 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                         });
                         setSelectedIndices(newSelection);
                       }}
-                      className="text-xs font-bold text-stone-400 hover:underline"
+                      className="text-xs font-bold text-text-secondary hover:underline"
                     >
                       إلغاء المفلتر
                     </button>
                   </div>
                 </div>
 
-                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-stone-50 p-4 rounded-2xl border border-stone-100">
-                  <h4 className="font-bold text-stone-800 flex items-center gap-2 shrink-0">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4 bg-bg-primary p-4 rounded-2xl border border-border-primary">
+                  <h4 className="font-bold text-text-primary flex items-center gap-2 shrink-0">
                     <Book size={18} className="text-emerald-500" />
                     الفصول ({filteredChapters.length} من {chapters.length})
                   </h4>
                   
                   <div className="flex items-center gap-2 w-full sm:w-auto">
-                    <span className="text-xs font-bold text-stone-500 shrink-0">تحديد من:</span>
+                    <span className="text-xs font-bold text-text-secondary shrink-0">تحديد من:</span>
                     <input 
                       type="number" 
-                      className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
+                      className="w-16 p-2 bg-bg-secondary border border-border-primary rounded-lg text-center text-sm font-bold text-text-primary"
                       value={rangeFrom}
                       onChange={(e) => setRangeFrom(e.target.value)}
                       placeholder="1"
                     />
-                    <span className="text-xs font-bold text-stone-500 shrink-0">إلى:</span>
+                    <span className="text-xs font-bold text-text-secondary shrink-0">إلى:</span>
                     <input 
                       type="number" 
-                      className="w-16 p-2 bg-white border border-stone-200 rounded-lg text-center text-sm font-bold"
+                      className="w-16 p-2 bg-bg-secondary border border-border-primary rounded-lg text-center text-sm font-bold text-text-primary"
                       value={rangeTo}
                       onChange={(e) => setRangeTo(e.target.value)}
                       placeholder="10"
@@ -430,7 +470,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                     <button 
                       type="button"
                       onClick={handleApplyRange}
-                      className="bg-stone-800 text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-black transition-colors"
+                      className="bg-text-primary text-bg-primary px-3 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-colors"
                     >
                       تطبيق
                     </button>
@@ -440,15 +480,15 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                     <button 
                       type="button"
                       onClick={() => setSelectedIndices(new Set(chapters.map((_, i) => i)))}
-                      className="text-xs font-bold text-blue-600 hover:underline"
+                      className="text-xs font-bold text-blue-500 hover:underline"
                     >
                       تحديد الكل
                     </button>
-                    <span className="text-stone-300">|</span>
+                    <span className="text-border-primary">|</span>
                     <button 
                       type="button"
                       onClick={() => setSelectedIndices(new Set())}
-                      className="text-xs font-bold text-stone-400 hover:underline"
+                      className="text-xs font-bold text-text-secondary hover:underline"
                     >
                       إلغاء التحديد
                     </button>
@@ -464,8 +504,8 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                       key={chapter.number}
                       className={`group p-4 rounded-2xl border transition-all flex items-center justify-between ${
                         selectedIndices.has(originalIndex) 
-                          ? 'bg-emerald-50 border-emerald-200 shadow-sm' 
-                          : 'bg-white border-stone-100 hover:border-stone-200'
+                          ? 'bg-emerald-500/10 border-emerald-500/30 shadow-sm' 
+                          : 'bg-bg-secondary border-border-primary hover:border-blue-500/30'
                       }`}
                     >
                       <div className="flex items-center gap-3 min-w-0">
@@ -475,30 +515,30 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                           className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-all ${
                             selectedIndices.has(originalIndex) 
                               ? 'bg-emerald-500 border-emerald-500 text-white' 
-                              : 'border-stone-200 bg-white'
+                              : 'border-border-primary bg-bg-primary'
                           }`}
                         >
                           {selectedIndices.has(originalIndex) && <Check size={14} />}
                         </button>
                         <div className="min-w-0">
-                          <div className="text-xs font-bold text-stone-400 uppercase tracking-wider flex items-center gap-2">
+                          <div className="text-xs font-bold text-text-secondary uppercase tracking-wider flex items-center gap-2">
                             فصل {chapter.number}
                             <div className="flex gap-1">
                               {chapter.content_original && (
-                                <span className="px-1.5 py-0.5 bg-stone-100 text-stone-500 rounded text-[10px]">أصلي</span>
+                                <span className="px-1.5 py-0.5 bg-bg-primary text-text-secondary rounded text-[10px]">أصلي</span>
                               )}
                               {chapter.content_arabic && (
-                                <span className="px-1.5 py-0.5 bg-blue-100 text-blue-500 rounded text-[10px]">مترجم</span>
+                                <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded text-[10px]">مترجم</span>
                               )}
                             </div>
                           </div>
-                          <div className="font-bold text-stone-800 truncate">{chapter.title}</div>
+                          <div className="font-bold text-text-primary truncate">{chapter.title}</div>
                         </div>
                       </div>
                       <button 
                         type="button"
                         onClick={() => setPreviewChapter(chapter)}
-                        className="p-2 text-stone-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all"
+                        className="p-2 text-text-secondary hover:text-blue-500 hover:bg-blue-500/10 rounded-xl transition-all"
                         title="معاينة الفصل"
                       >
                         <Eye size={20} />
@@ -509,17 +549,17 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
               </div>
 
               {/* Novel Selection & Save */}
-              <div className="pt-6 border-t border-stone-100 space-y-4">
+              <div className="pt-6 border-t border-border-primary space-y-4">
                 <div className="space-y-2">
-                  <label className="text-sm font-bold text-stone-600">اختر الرواية للتخزين فيها</label>
+                  <label className="text-sm font-bold text-text-secondary">اختر الرواية للتخزين فيها</label>
                   <select 
-                    className="w-full p-4 bg-stone-50 border border-stone-200 rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-stone-700"
+                    className="w-full p-4 bg-bg-primary border border-border-primary rounded-2xl focus:ring-2 focus:ring-emerald-500 outline-none font-bold text-text-primary"
                     value={selectedNovelId}
                     onChange={(e) => setSelectedNovelId(e.target.value)}
                   >
-                    <option value="">-- اختر رواية --</option>
+                    <option value="" className="bg-bg-secondary">-- اختر رواية --</option>
                     {novels.map(novel => (
-                      <option key={novel.id} value={novel.id}>{novel.title}</option>
+                      <option key={novel.id} value={novel.id} className="bg-bg-secondary">{novel.title}</option>
                     ))}
                   </select>
                 </div>
@@ -528,7 +568,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                   type="button"
                   onClick={handleSave}
                   disabled={isSaving || !selectedNovelId || selectedIndices.size === 0}
-                  className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100 flex items-center justify-center gap-3 disabled:opacity-50"
+                  className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-bold text-lg hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-500/20 flex items-center justify-center gap-3 disabled:opacity-50"
                 >
                   {isSaving ? (
                     <>
@@ -548,6 +588,111 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
         </div>
       </motion.div>
 
+      {/* Prompt Guide Modal */}
+      <AnimatePresence>
+        {showPromptGuide && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowPromptGuide(false)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="relative w-full max-w-2xl bg-bg-secondary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh] border border-border-primary"
+            >
+              <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-secondary sticky top-0">
+                <div className="flex items-center gap-2">
+                  <Sparkles className="text-blue-500" size={20} />
+                  <h4 className="text-lg font-bold text-text-primary">دليل برومت Gemini</h4>
+                </div>
+                <button type="button" onClick={() => setShowPromptGuide(false)} className="p-2 hover:bg-bg-primary rounded-full transition-colors text-text-secondary">
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="p-8 overflow-y-auto space-y-8">
+                <div className="space-y-4">
+                  <h5 className="font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-6 h-6 bg-emerald-500/10 text-emerald-500 rounded flex items-center justify-center text-xs">1</div>
+                    برومت الترجمة المثالي
+                  </h5>
+                  <div className="bg-bg-primary p-4 rounded-2xl border border-border-primary relative group">
+                    <pre className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed font-mono">
+{`ترجم الفصول التالية من [اللغة الأصلية] إلى العربية بأسلوب أدبي رفيع.
+التزم بالقواعد التالية:
+1. ابدأ كل فصل بعبارة "الفصل [الرقم]" في سطر مستقل.
+2. حافظ على أسماء الشخصيات والأماكن كما هي أو ترجمها بشكل متسق.
+3. لا تضف أي تعليقات جانبية أو مقدمات، فقط محتوى الفصول.
+4. تأكد من أن كل فصل يحتوي على النص الكامل.
+
+النص المراد ترجمته:
+[الصق النص هنا]`}
+                    </pre>
+                    <button 
+                      onClick={() => {
+                        const text = `ترجم الفصول التالية من [اللغة الأصلية] إلى العربية بأسلوب أدبي رفيع.\nالتزم بالقواعد التالية:\n1. ابدأ كل فصل بعبارة "الفصل [الرقم]" في سطر مستقل.\n2. حافظ على أسماء الشخصيات والأماكن كما هي أو ترجمها بشكل متسق.\n3. لا تضف أي تعليقات جانبية أو مقدمات، فقط محتوى الفصول.\n4. تأكد من أن كل فصل يحتوي على النص الكامل.\n\nالنص المراد ترجمته:\n[الصق النص هنا]`;
+                        navigator.clipboard.writeText(text);
+                        alert('تم نسخ البرومت');
+                      }}
+                      className="absolute top-4 left-4 p-2 bg-bg-secondary border border-border-primary rounded-lg text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-500"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h5 className="font-bold text-text-primary flex items-center gap-2">
+                    <div className="w-6 h-6 bg-blue-500/10 text-blue-500 rounded flex items-center justify-center text-xs">2</div>
+                    برومت الاستخراج (للنصوص المختلطة)
+                  </h5>
+                  <div className="bg-bg-primary p-4 rounded-2xl border border-border-primary relative group">
+                    <pre className="text-sm text-text-primary whitespace-pre-wrap leading-relaxed font-mono">
+{`لديك نص يحتوي على فصول رواية باللغتين [الأصلية] والعربية.
+أعد صياغة النص بحيث يظهر كل فصل بالشكل التالي:
+الفصل [الرقم]: [العنوان]
+[النص الأصلي]
+---
+[النص المترجم]
+
+تأكد من فصل كل فصل عن الآخر بوضوح.`}
+                    </pre>
+                    <button 
+                      onClick={() => {
+                        const text = `لديك نص يحتوي على فصول رواية باللغتين [الأصلية] والعربية.\nأعد صياغة النص بحيث يظهر كل فصل بالشكل التالي:\nالفصل [الرقم]: [العنوان]\n[النص الأصلي]\n---\n[النص المترجم]\n\nتأكد من فصل كل فصل عن الآخر بوضوح.`;
+                        navigator.clipboard.writeText(text);
+                        alert('تم نسخ البرومت');
+                      }}
+                      className="absolute top-4 left-4 p-2 bg-bg-secondary border border-border-primary rounded-lg text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-500"
+                    >
+                      <Copy size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl">
+                  <p className="text-xs text-amber-600 leading-relaxed">
+                    <span className="font-bold">نصيحة:</span> عند استخدام Gemini، يفضل طلب ترجمة 3-5 فصول في المرة الواحدة لضمان الجودة وعدم انقطاع النص. بعد الانتهاء، استخدم رابط المشاركة (Share Link) وجلبه هنا مباشرة.
+                  </p>
+                </div>
+              </div>
+              <div className="p-6 border-t border-border-primary bg-bg-secondary">
+                <button 
+                  onClick={() => setShowPromptGuide(false)}
+                  className="w-full bg-text-primary text-bg-primary py-3 rounded-xl font-bold hover:opacity-90 transition-opacity"
+                >
+                  فهمت ذلك
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Preview Modal */}
       <AnimatePresence>
         {previewChapter && (
@@ -557,31 +702,31 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setPreviewChapter(null)}
-              className="absolute inset-0 bg-stone-900/80 backdrop-blur-md"
+              className="absolute inset-0 bg-black/80 backdrop-blur-md"
             />
             <motion.div 
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+              className="relative w-full max-w-2xl bg-bg-secondary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh] border border-border-primary"
             >
-              <div className="p-6 border-b border-stone-100 flex items-center justify-between bg-white sticky top-0">
-                <h4 className="text-lg font-bold text-stone-900">{previewChapter.title}</h4>
-                <button type="button" onClick={() => setPreviewChapter(null)} className="p-2 hover:bg-stone-100 rounded-full transition-colors text-stone-400">
+              <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-secondary sticky top-0">
+                <h4 className="text-lg font-bold text-text-primary">{previewChapter.title}</h4>
+                <button type="button" onClick={() => setPreviewChapter(null)} className="p-2 hover:bg-bg-primary rounded-full transition-colors text-text-secondary">
                   <X size={20} />
                 </button>
               </div>
-              <div className="p-8 overflow-y-auto text-stone-700 leading-relaxed whitespace-pre-wrap font-medium space-y-6">
+              <div className="p-8 overflow-y-auto text-text-primary leading-relaxed whitespace-pre-wrap font-medium space-y-6">
                 {previewChapter.content_original && (
                   <div>
-                    <div className="text-xs font-bold text-stone-400 uppercase mb-2 border-b border-stone-100 pb-1">النص الأصلي</div>
-                    <div className="bg-stone-50 p-4 rounded-xl text-sm">{previewChapter.content_original}</div>
+                    <div className="text-xs font-bold text-text-secondary uppercase mb-2 border-b border-border-primary pb-1">النص الأصلي</div>
+                    <div className="bg-bg-primary p-4 rounded-xl text-sm">{previewChapter.content_original}</div>
                   </div>
                 )}
                 {previewChapter.content_arabic && (
                   <div>
-                    <div className="text-xs font-bold text-blue-400 uppercase mb-2 border-b border-blue-50 pb-1">الترجمة العربية</div>
-                    <div className="bg-blue-50/30 p-4 rounded-xl">{previewChapter.content_arabic}</div>
+                    <div className="text-xs font-bold text-blue-500 uppercase mb-2 border-b border-blue-500/20 pb-1">الترجمة العربية</div>
+                    <div className="bg-blue-500/5 p-4 rounded-xl">{previewChapter.content_arabic}</div>
                   </div>
                 )}
               </div>
@@ -589,6 +734,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
           </div>
         )}
       </AnimatePresence>
+
     </div>
   );
 };

@@ -4,10 +4,32 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
   --animate-spin-slow: spin 3s linear infinite;
+
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-border-primary: var(--border-primary);
+}
+
+:root {
+  --bg-primary: #fafaf9; /* stone-50 */
+  --bg-secondary: #ffffff;
+  --text-primary: #1c1917; /* stone-900 */
+  --text-secondary: #78716c; /* stone-500 */
+  --border-primary: #e7e5e4; /* stone-200 */
+}
+
+.dark {
+  --bg-primary: #0c0a09; /* stone-950 */
+  --bg-secondary: #1c1917; /* stone-900 */
+  --text-primary: #fafaf9; /* stone-50 */
+  --text-secondary: #a8a29e; /* stone-400 */
+  --border-primary: #292524; /* stone-800 */
 }
 
 body {
-  @apply bg-stone-50 text-stone-900;
+  @apply bg-bg-primary text-text-primary transition-colors duration-300;
   direction: rtl;
 }
 
