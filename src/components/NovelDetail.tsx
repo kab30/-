@@ -5,6 +5,7 @@ import {
   Book, 
   Upload, 
   Copy, 
+  Clipboard,
   Save, 
   ChevronRight, 
   ChevronLeft, 
@@ -16,6 +17,7 @@ import {
   Languages,
   Loader2,
   Check,
+  Eye,
   Download,
   Plus,
   Wifi,
@@ -79,6 +81,7 @@ export const NovelDetail: React.FC = () => {
   const [checkResults, setCheckResults] = useState<{ missing: number[], max: number } | null>(null);
   const [deleteRangeStart, setDeleteRangeStart] = useState('');
   const [deleteRangeEnd, setDeleteRangeEnd] = useState('');
+  const [previewPendingChapter, setPreviewPendingChapter] = useState<any | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -385,51 +388,72 @@ export const NovelDetail: React.FC = () => {
     if (isEpub) {
       try {
         const book = ePub(await file.arrayBuffer());
-        const spine = await book.loaded.spine;
+        await book.ready;
+        
         const parsedChapters: any[] = [];
         let currentMax = maxExistingNum;
 
-        for (let i = 0; i < spine.length; i++) {
-          const item = (spine as any).get(i);
-          if (!item) continue;
-          
-          const html = await item.load(book.load.bind(book));
-          const doc = new DOMParser().parseFromString(html, 'text/html');
-          const textContent = doc.body.textContent || "";
-          
-          if (textContent.trim().length < 50) continue;
-
-          const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/gi;
-          const match = chapterRegex.exec(textContent);
-          
-          let chapterNum: number;
-          if (match) {
-            chapterNum = parseInt(match[1] || match[2] || match[3] || match[4]);
-          } else {
-            chapterNum = currentMax + 1;
-          }
-          
-          if (!isNaN(chapterNum)) {
-            currentMax = Math.max(currentMax, chapterNum);
+        // Iterate through spine items
+        for (const item of (book.spine as any).spineItems) {
+          try {
+            const content = await item.load(book.load.bind(book));
+            const doc = (typeof content === 'string') 
+              ? new DOMParser().parseFromString(content, 'text/html')
+              : content as Document;
             
-            const lines = textContent.trim().split('\n');
-            const title = lines[0].trim().substring(0, 100);
-            const content = lines.slice(1).join('\n').trim();
+            if (!doc || !doc.body) continue;
 
-            parsedChapters.push({
-              novel_id: novel.id,
-              chapter_number: chapterNum,
-              title: title || `الفصل ${chapterNum}`,
-              content_original: content || textContent.trim(),
-              isDuplicate: existingNumbers.has(chapterNum)
-            });
+            // Try to get title from headers
+            let title = "";
+            const header = doc.querySelector('h1, h2, h3, h4, h5, h6');
+            if (header) {
+              title = header.textContent?.trim() || "";
+            }
+
+            const textContent = doc.body.textContent || "";
+            const trimmedText = textContent.trim();
+            
+            // Skip very short sections (like nav, title page)
+            if (trimmedText.length < 20) continue;
+
+            const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/i;
+            const match = trimmedText.match(chapterRegex);
+            
+            let chapterNum: number;
+            if (match) {
+              chapterNum = parseInt(match[1] || match[2] || match[3] || match[4]);
+            } else {
+              chapterNum = currentMax + 1;
+            }
+            
+            if (!isNaN(chapterNum)) {
+              currentMax = Math.max(currentMax, chapterNum);
+              
+              if (!title) {
+                const lines = trimmedText.split('\n');
+                title = lines[0].trim().substring(0, 100);
+              }
+
+              const lines = trimmedText.split('\n');
+              const content = lines.length > 1 ? lines.slice(1).join('\n').trim() : trimmedText;
+
+              parsedChapters.push({
+                novel_id: novel.id,
+                chapter_number: chapterNum,
+                title: title || `الفصل ${chapterNum}`,
+                content_original: content || trimmedText,
+                isDuplicate: existingNumbers.has(chapterNum)
+              });
+            }
+          } catch (itemErr) {
+            console.error('Error parsing spine item:', itemErr);
           }
         }
         
         setPendingChapters(parsedChapters);
         setSelectedPendingIndices(new Set(
           parsedChapters
-            .map((c, idx) => c.isDuplicate ? -1 : idx)
+            .map((c, idx) => (c.isDuplicate || !c.content_original?.trim()) ? -1 : idx)
             .filter(idx => idx !== -1)
         ));
         setShowUploadPreview(true);
@@ -437,7 +461,7 @@ export const NovelDetail: React.FC = () => {
         return;
       } catch (err) {
         console.error('Error parsing EPUB:', err);
-        alert('حدث خطأ أثناء قراءة ملف EPUB');
+        alert('حدث خطأ أثناء قراءة ملف EPUB. تأكد من أن الملف غير محمي (DRM-free).');
         setIsUploading(false);
         return;
       }
@@ -488,7 +512,7 @@ export const NovelDetail: React.FC = () => {
       setPendingChapters(parsedChapters);
       setSelectedPendingIndices(new Set(
         parsedChapters
-          .map((c, idx) => c.isDuplicate ? -1 : idx)
+          .map((c, idx) => (c.isDuplicate || !c.content_original?.trim()) ? -1 : idx)
           .filter(idx => idx !== -1)
       ));
       setShowUploadPreview(true);
@@ -637,6 +661,19 @@ export const NovelDetail: React.FC = () => {
     } catch (err) {
       console.error('Failed to copy: ', err);
       alert('فشل النسخ. يرجى المحاولة مرة أخرى أو النسخ يدوياً.');
+    }
+  };
+
+  const handlePaste = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        setArabicContent(text);
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard contents: ', err);
+      // Fallback for some browsers or if permission is denied
+      alert('فشل في قراءة الحافظة. يرجى التأكد من منح الإذن للمتصفح أو استخدام Ctrl+V يدوياً.');
     }
   };
 
@@ -1268,13 +1305,22 @@ export const NovelDetail: React.FC = () => {
                         <Languages size={14} />
                         الترجمة العربية
                       </span>
-                      <button 
-                        onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
-                        className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
-                        title="نسخ الترجمة"
-                      >
-                        <Copy size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={handlePaste}
+                          className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
+                          title="لصق الترجمة"
+                        >
+                          <Clipboard size={14} />
+                        </button>
+                        <button 
+                          onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${arabicContent}`)}
+                          className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
+                          title="نسخ الترجمة"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
                     </div>
                     <textarea
                       className="w-full h-[600px] p-4 bg-bg-primary border border-border-primary rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-text-primary"
@@ -1519,11 +1565,24 @@ export const NovelDetail: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-text-secondary opacity-60">#{chapter.chapter_number}</span>
                         <span className="font-bold text-text-primary">{chapter.title}</span>
+                        {!chapter.content_original?.trim() && (
+                          <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">فارغ</span>
+                        )}
                       </div>
                       {chapter.isDuplicate && (
                         <span className="text-[10px] font-bold text-amber-600 bg-amber-500/10 px-1.5 py-0.5 rounded">موجود مسبقاً</span>
                       )}
                     </div>
+                    <button 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewPendingChapter(chapter);
+                      }}
+                      className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
+                      title="معاينة المحتوى"
+                    >
+                      <Eye size={18} />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -1536,6 +1595,50 @@ export const NovelDetail: React.FC = () => {
                 >
                   {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={20} />}
                   حفظ الفصول المختارة ({selectedPendingIndices.size})
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Pending Chapter Preview Modal */}
+      <AnimatePresence>
+        {previewPendingChapter && (
+          <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setPreviewPendingChapter(null)}
+              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative w-full max-w-2xl bg-bg-primary rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]"
+            >
+              <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-primary sticky top-0 z-10">
+                <div>
+                  <h3 className="text-xl font-bold text-text-primary">معاينة: {previewPendingChapter.title}</h3>
+                  <p className="text-sm text-text-secondary">الفصل رقم {previewPendingChapter.chapter_number}</p>
+                </div>
+                <button onClick={() => setPreviewPendingChapter(null)} className="text-text-secondary hover:text-text-primary">
+                  <Plus size={24} className="rotate-45" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 prose prose-stone dark:prose-invert max-w-none">
+                <div className="whitespace-pre-wrap font-mono text-text-primary leading-relaxed">
+                  {previewPendingChapter.content_original || <span className="italic opacity-60">لا يوجد محتوى لهذا الفصل</span>}
+                </div>
+              </div>
+              <div className="p-6 border-t border-border-primary bg-bg-primary">
+                <button 
+                  onClick={() => setPreviewPendingChapter(null)}
+                  className="w-full bg-bg-secondary text-text-primary py-3 rounded-xl font-bold hover:bg-border-primary transition-all"
+                >
+                  إغلاق المعاينة
                 </button>
               </div>
             </motion.div>

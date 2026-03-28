@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Sparkles, CheckCircle2, Zap, Globe, Save } from 'lucide-react';
+import { X, Sparkles, CheckCircle2, Zap, Globe, Save, Clipboard, Eye } from 'lucide-react';
 
 interface ChangelogModalProps {
   isOpen: boolean;
@@ -11,24 +11,24 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
-      title: 'دليل برومت Gemini',
-      description: 'إضافة نافذة تحتوي على برومتات جاهزة للنسخ لتحسين جودة الترجمة والاستخراج.',
-      icon: <Sparkles className="text-amber-500" size={20} />
+      title: 'زر لصق الترجمة',
+      description: 'إضافة زر جديد بجانب الترجمة العربية يتيح لك لصق النص من الحافظة بضغطة واحدة.',
+      icon: <Clipboard className="text-emerald-500" size={20} />
     },
     {
-      title: 'تصفية اللغات الذكية',
-      description: 'إمكانية تحديد استخراج اللغة العربية أو الصينية فقط عند الجلب اليدوي لتجنب التداخل.',
-      icon: <Globe className="text-blue-500" size={20} />
+      title: 'تحسين سحب EPUB',
+      description: 'إصلاح مشكلة استخراج الفصول من ملفات EPUB وضمان ظهور العناوين والمحتوى بشكل صحيح.',
+      icon: <Zap className="text-amber-500" size={20} />
     },
     {
-      title: 'تحسين الوضع الليلي',
-      description: 'تحديث كامل لجميع المكونات لتدعم الوضع المظلم بشكل متناسق ومريح للعين.',
-      icon: <Zap className="text-indigo-500" size={20} />
+      title: 'معاينة الفصول قبل الرفع',
+      description: 'إمكانية معاينة محتوى كل فصل قبل تأكيد الرفع لضمان دقة البيانات المستخرجة.',
+      icon: <Eye className="text-blue-500" size={20} />
     },
     {
-      title: 'استقرار الحفظ التلقائي',
-      description: 'تحسين عملية حفظ الفصول الكبيرة مع شريط تقدم دقيق لضمان سلامة البيانات.',
-      icon: <CheckCircle2 className="text-emerald-500" size={20} />
+      title: 'تحديد ذكي للفصول',
+      description: 'تلقائياً يتم استثناء الفصول الفارغة أو المكررة من التحديد عند رفع ملفات جديدة.',
+      icon: <CheckCircle2 className="text-indigo-500" size={20} />
     }
   ];
 
