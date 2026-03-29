@@ -32,7 +32,8 @@ import {
   Maximize2,
   Minimize2,
   RefreshCw,
-  Globe
+  Globe,
+  Sparkles
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -40,6 +41,7 @@ import { twMerge } from 'tailwind-merge';
 import ePub from 'epubjs';
 import { ScraperModal } from './ScraperModal';
 import { CleaningRulesModal } from './CleaningRulesModal';
+import { GeminiTranslateModal } from './GeminiTranslateModal';
 import { Settings2 } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
@@ -70,6 +72,7 @@ export const NovelDetail: React.FC = () => {
   const [editedNotes, setEditedNotes] = useState('');
   const [isScraperOpen, setIsScraperOpen] = useState(false);
   const [isCleaningRulesOpen, setIsCleaningRulesOpen] = useState(false);
+  const [isGeminiTranslateOpen, setIsGeminiTranslateOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [chapterFilter, setChapterFilter] = useState<'all' | 'translated' | 'untranslated'>('all');
   const [pendingChapters, setPendingChapters] = useState<any[]>([]);
@@ -1045,6 +1048,15 @@ export const NovelDetail: React.FC = () => {
               <span>سحب من رابط</span>
             </motion.button>
             <motion.button 
+              onClick={() => setIsGeminiTranslateOpen(true)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
+            >
+              <Sparkles size={20} />
+              <span>ترجمة بواسطة Gemini</span>
+            </motion.button>
+            <motion.button 
               onClick={() => setShowEmbeddedBrowser(!showEmbeddedBrowser)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
@@ -1754,6 +1766,21 @@ export const NovelDetail: React.FC = () => {
             isOpen={isCleaningRulesOpen}
             onClose={() => setIsCleaningRulesOpen(false)}
             novelId={novel.id}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Gemini Translate Modal */}
+      <AnimatePresence>
+        {isGeminiTranslateOpen && novel && (
+          <GeminiTranslateModal 
+            isOpen={isGeminiTranslateOpen}
+            onClose={() => setIsGeminiTranslateOpen(false)}
+            novelId={novel.id}
+            chapters={chapters}
+            onSuccess={() => {
+              fetchChapters(novel.id);
+            }}
           />
         )}
       </AnimatePresence>

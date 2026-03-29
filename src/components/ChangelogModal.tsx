@@ -11,7 +11,12 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
-      title: 'المتصفح المدمج (جديد)',
+      title: 'الترجمة الآلية بواسطة Gemini (جديد)',
+      description: 'إمكانية ترجمة الفصول المختارة آلياً وبسرعة عالية باستخدام ذكاء Gemini الاصطناعي.',
+      icon: <Sparkles className="text-emerald-500" size={20} />
+    },
+    {
+      title: 'المتصفح المدمج',
       description: 'فتح الموقع الأصلي في نافذة جانبية داخل الموقع لتسهيل النسخ واللصق وتجاوز الحماية.',
       icon: <Globe className="text-blue-500" size={20} />
     },
@@ -24,11 +29,6 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose,
       title: 'تحسين سحب ملفات Text',
       description: 'تطوير منطق استخراج الفصول من ملفات التكست لتجنب التداخل مع الطوابع الزمنية ودعم المقدمات.',
       icon: <Zap className="text-amber-500" size={20} />
-    },
-    {
-      title: 'تحسين سحب EPUB',
-      description: 'إصلاح مشكلة استخراج الفصول من ملفات EPUB وضمان ظهور العناوين والمحتوى بشكل صحيح.',
-      icon: <Save className="text-emerald-500" size={20} />
     }
   ];
 
