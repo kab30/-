@@ -11,8 +11,13 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
-      title: 'زر لصق الترجمة',
-      description: 'إضافة زر جديد بجانب الترجمة العربية يتيح لك لصق النص من الحافظة بضغطة واحدة.',
+      title: 'المتصفح المدمج (جديد)',
+      description: 'فتح الموقع الأصلي في نافذة جانبية داخل الموقع لتسهيل النسخ واللصق وتجاوز الحماية.',
+      icon: <Globe className="text-blue-500" size={20} />
+    },
+    {
+      title: 'تحديث النص الأصلي',
+      description: 'إضافة زر لصق لتحديث النص الأصلي للفصل مباشرة من الحافظة في حال فشل السحب.',
       icon: <Clipboard className="text-emerald-500" size={20} />
     },
     {
@@ -24,16 +29,6 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose,
       title: 'تحسين سحب EPUB',
       description: 'إصلاح مشكلة استخراج الفصول من ملفات EPUB وضمان ظهور العناوين والمحتوى بشكل صحيح.',
       icon: <Save className="text-emerald-500" size={20} />
-    },
-    {
-      title: 'معاينة الفصول قبل الرفع',
-      description: 'إمكانية معاينة محتوى كل فصل قبل تأكيد الرفع لضمان دقة البيانات المستخرجة.',
-      icon: <Eye className="text-blue-500" size={20} />
-    },
-    {
-      title: 'تحديد ذكي للفصول',
-      description: 'تلقائياً يتم استثناء الفصول الفارغة أو المكررة من التحديد عند رفع ملفات جديدة.',
-      icon: <CheckCircle2 className="text-indigo-500" size={20} />
     }
   ];
 

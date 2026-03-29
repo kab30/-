@@ -27,7 +27,12 @@ import {
   AlertCircle,
   CheckCircle2,
   StickyNote,
-  Link2
+  Link2,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  RefreshCw,
+  Globe
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -82,6 +87,9 @@ export const NovelDetail: React.FC = () => {
   const [deleteRangeStart, setDeleteRangeStart] = useState('');
   const [deleteRangeEnd, setDeleteRangeEnd] = useState('');
   const [previewPendingChapter, setPreviewPendingChapter] = useState<any | null>(null);
+  const [showEmbeddedBrowser, setShowEmbeddedBrowser] = useState(false);
+  const [browserWidth, setBrowserWidth] = useState(500);
+  const [isResizing, setIsResizing] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -95,11 +103,29 @@ export const NovelDetail: React.FC = () => {
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
+    const handleMouseMove = (e: MouseEvent) => {
+      if (isResizing) {
+        const newWidth = window.innerWidth - e.clientX;
+        setBrowserWidth(Math.max(300, Math.min(window.innerWidth * 0.8, newWidth)));
+      }
+    };
+
+    const handleMouseUp = () => {
+      setIsResizing(false);
+    };
+
+    if (isResizing) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
     return () => {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [id]);
+  }, [id, isResizing]);
 
   useEffect(() => {
     localStorage.setItem('pending_sync', JSON.stringify(pendingSync));
@@ -693,6 +719,28 @@ export const NovelDetail: React.FC = () => {
     }
   };
 
+  const handlePasteToOriginal = async () => {
+    if (!selectedChapter) return;
+    try {
+      const text = await navigator.clipboard.readText();
+      if (text) {
+        const { error } = await supabase
+          .from('chapters')
+          .update({ content_original: text })
+          .eq('id', selectedChapter.id);
+        
+        if (error) throw error;
+        
+        setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, content_original: text } : c));
+        setSelectedChapter(prev => prev ? { ...prev, content_original: text } : null);
+        alert('تم تحديث النص الأصلي بنجاح');
+      }
+    } catch (err) {
+      console.error('Failed to read clipboard contents: ', err);
+      alert('فشل في قراءة الحافظة. يرجى التأكد من منح الإذن للمتصفح أو استخدام Ctrl+V يدوياً.');
+    }
+  };
+
   const handleDownloadTranslated = () => {
     if (!novel || chapters.length === 0) return;
 
@@ -995,6 +1043,21 @@ export const NovelDetail: React.FC = () => {
             >
               <Link2 size={20} className="text-emerald-600" />
               <span>سحب من رابط</span>
+            </motion.button>
+            <motion.button 
+              onClick={() => setShowEmbeddedBrowser(!showEmbeddedBrowser)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className={cn(
+                "flex items-center gap-2 px-6 py-3 rounded-xl border transition-all shadow-sm",
+                showEmbeddedBrowser 
+                  ? "bg-emerald-600 text-white border-emerald-600" 
+                  : "bg-bg-primary text-text-primary border-border-primary hover:bg-bg-secondary"
+              )}
+              title="فتح المتصفح المدمج للموقع الأصلي"
+            >
+              <Globe size={20} className={showEmbeddedBrowser ? "text-white" : "text-blue-600"} />
+              <span>المتصفح المدمج</span>
             </motion.button>
             <motion.button 
               onClick={() => setIsCleaningRulesOpen(true)}
@@ -1301,13 +1364,22 @@ export const NovelDetail: React.FC = () => {
                         <Languages size={14} />
                         النص الأصلي
                       </span>
-                      <button 
-                        onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
-                        className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
-                        title="نسخ النص الأصلي"
-                      >
-                        <Copy size={14} />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button 
+                          onClick={handlePasteToOriginal}
+                          className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
+                          title="لصق النص الأصلي من الحافظة"
+                        >
+                          <Clipboard size={14} />
+                        </button>
+                        <button 
+                          onClick={() => copyToClipboard(`${selectedChapter.title}\n\n${selectedChapter.content_original}`)}
+                          className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
+                          title="نسخ النص الأصلي"
+                        >
+                          <Copy size={14} />
+                        </button>
+                      </div>
                     </div>
                     <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary">
                       {selectedChapter.content_original}
@@ -1683,6 +1755,92 @@ export const NovelDetail: React.FC = () => {
             onClose={() => setIsCleaningRulesOpen(false)}
             novelId={novel.id}
           />
+        )}
+      </AnimatePresence>
+
+      {/* Embedded Browser Side Panel */}
+      <AnimatePresence>
+        {showEmbeddedBrowser && novel && (
+          <>
+            {/* Resizer Overlay */}
+            {isResizing && (
+              <div className="fixed inset-0 z-[110] cursor-col-resize" />
+            )}
+            
+            <motion.div 
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+              style={{ width: browserWidth }}
+              className="fixed top-0 right-0 h-full bg-bg-primary border-l border-border-primary shadow-2xl z-[100] flex flex-col"
+            >
+              {/* Resize Handle */}
+              <div 
+                onMouseDown={() => setIsResizing(true)}
+                className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-emerald-500 transition-colors z-[101]"
+              />
+
+              {/* Browser Header */}
+              <div className="p-4 border-b border-border-primary flex items-center justify-between bg-bg-secondary/50">
+                <div className="flex items-center gap-3 overflow-hidden">
+                  <div className="p-2 bg-blue-500 text-white rounded-lg shrink-0">
+                    <Globe size={18} />
+                  </div>
+                  <div className="overflow-hidden">
+                    <h3 className="font-bold text-text-primary truncate text-sm">المتصفح المدمج</h3>
+                    <p className="text-[10px] text-text-secondary truncate">{novel.source_url}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <button 
+                    onClick={() => {
+                      const iframe = document.getElementById('novel-iframe') as HTMLIFrameElement;
+                      if (iframe) iframe.src = iframe.src;
+                    }}
+                    className="p-2 hover:bg-bg-primary rounded-lg text-text-secondary transition-colors"
+                    title="تحديث الصفحة"
+                  >
+                    <RefreshCw size={16} />
+                  </button>
+                  <a 
+                    href={novel.source_url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="p-2 hover:bg-bg-primary rounded-lg text-text-secondary transition-colors"
+                    title="فتح في تبويب جديد"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                  <button 
+                    onClick={() => setShowEmbeddedBrowser(false)}
+                    className="p-2 hover:bg-bg-primary rounded-lg text-text-secondary transition-colors"
+                  >
+                    <Plus size={20} className="rotate-45" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Browser Content */}
+              <div className="flex-1 bg-white relative">
+                <iframe 
+                  id="novel-iframe"
+                  src={novel.source_url}
+                  className="w-full h-full border-none"
+                  title="Novel Source"
+                  sandbox="allow-same-origin allow-scripts allow-forms allow-popups"
+                />
+                
+                {/* Overlay for when resizing to prevent iframe from capturing mouse events */}
+                {isResizing && <div className="absolute inset-0 z-10" />}
+              </div>
+
+              {/* Browser Footer */}
+              <div className="p-4 border-t border-border-primary bg-bg-secondary/30 text-[10px] text-text-secondary text-center">
+                <p>ملاحظة: بعض المواقع قد تمنع عرضها هنا لأسباب أمنية. إذا لم يظهر المحتوى، استخدم زر "الفتح في تبويب جديد".</p>
+              </div>
+            </motion.div>
+          </>
         )}
       </AnimatePresence>
     </motion.div>
