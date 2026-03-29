@@ -416,7 +416,7 @@ export const NovelDetail: React.FC = () => {
             // Skip very short sections (like nav, title page)
             if (trimmedText.length < 20) continue;
 
-            const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/i;
+            const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+))/i;
             const match = trimmedText.match(chapterRegex);
             
             let chapterNum: number;
@@ -471,7 +471,8 @@ export const NovelDetail: React.FC = () => {
     reader.onload = async (event) => {
       const text = event.target?.result as string;
       
-      const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+)|(\d+)\s*:)/gi;
+      // Improved regex: matches at start of line, removed aggressive (\d+): which caught timestamps
+      const chapterRegex = /^\s*(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+))/gim;
       const markers = Array.from(text.matchAll(chapterRegex));
       
       const parsedChapters: any[] = [];
@@ -486,9 +487,24 @@ export const NovelDetail: React.FC = () => {
           isDuplicate: existingNumbers.has(nextNum)
         });
       } else {
+        // Handle content before the first marker (e.g., intro, title page)
+        const firstMarkerIndex = markers[0].index!;
+        if (firstMarkerIndex > 10) {
+          const introText = text.substring(0, firstMarkerIndex).trim();
+          if (introText.length > 50) { // Only add if it's substantial
+            parsedChapters.push({
+              novel_id: novel.id,
+              chapter_number: 0,
+              title: "مقدمة / تمهيد",
+              content_original: introText,
+              isDuplicate: false
+            });
+          }
+        }
+
         for (let i = 0; i < markers.length; i++) {
           const match = markers[i];
-          const extractedNum = parseInt(match[1] || match[2] || match[3] || match[4]);
+          const extractedNum = parseInt(match[1] || match[2] || match[3] || "");
           const chapterNum = isNaN(extractedNum) ? (maxExistingNum + i + 1) : extractedNum;
           
           const start = match.index!;

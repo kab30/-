@@ -16,9 +16,14 @@ export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose,
       icon: <Clipboard className="text-emerald-500" size={20} />
     },
     {
+      title: 'تحسين سحب ملفات Text',
+      description: 'تطوير منطق استخراج الفصول من ملفات التكست لتجنب التداخل مع الطوابع الزمنية ودعم المقدمات.',
+      icon: <Zap className="text-amber-500" size={20} />
+    },
+    {
       title: 'تحسين سحب EPUB',
       description: 'إصلاح مشكلة استخراج الفصول من ملفات EPUB وضمان ظهور العناوين والمحتوى بشكل صحيح.',
-      icon: <Zap className="text-amber-500" size={20} />
+      icon: <Save className="text-emerald-500" size={20} />
     },
     {
       title: 'معاينة الفصول قبل الرفع',
