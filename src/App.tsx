@@ -234,94 +234,98 @@ function AppContent({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleThe
   return (
     <div className="min-h-screen bg-bg-primary font-sans text-text-primary pb-20 transition-colors duration-300">
       {/* Header */}
-      <header className="bg-bg-secondary border-b border-border-primary sticky top-0 z-30 px-4 py-4 transition-colors duration-300">
-        <div className="max-w-6xl mx-auto flex items-center justify-between">
+      <header className="bg-bg-secondary border-b border-border-primary sticky top-0 z-30 px-2 sm:px-4 py-3 sm:py-4 transition-colors duration-300">
+        <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
           <div 
-            className="flex items-center gap-2 cursor-pointer" 
+            className="flex items-center gap-2 cursor-pointer w-full sm:w-auto justify-between sm:justify-start" 
             onClick={() => navigate('/')}
           >
-            <div className="w-10 h-10 bg-emerald-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
-              <BookOpen size={24} />
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-emerald-600 rounded-lg sm:rounded-xl flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
+                <BookOpen size={20} className="sm:w-6 sm:h-6" />
+              </div>
+              <h1 className="text-lg sm:text-xl font-bold tracking-tight">مستودع الروايات</h1>
             </div>
-            <h1 className="text-xl font-bold tracking-tight">مستودع الروايات</h1>
             {!isOnline && (
-              <div className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded-lg text-xs font-bold animate-pulse">
-                <WifiOff size={12} />
-                <span>أنت تعمل بدون إنترنت</span>
+              <div className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded-lg text-[10px] sm:text-xs font-bold animate-pulse">
+                <WifiOff size={10} className="sm:w-3 sm:h-3" />
+                <span>بدون إنترنت</span>
               </div>
             )}
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center justify-between sm:justify-end gap-2 sm:gap-4 w-full sm:w-auto">
             <Routes>
               <Route path="/" element={
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1.5 sm:gap-2">
                   <button 
                     onClick={() => setIsGeminiImportOpen(true)}
-                    className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 px-4 py-2 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border border-blue-100 dark:border-blue-900/30"
+                    className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 p-2 sm:px-4 sm:py-2 rounded-xl hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors border border-blue-100 dark:border-blue-900/30"
                     title="جلب من Gemini"
                   >
-                    <Sparkles size={20} />
-                    <span className="hidden sm:inline">جلب من Gemini</span>
+                    <Sparkles size={18} className="sm:w-5 sm:h-5" />
+                    <span className="hidden md:inline">جلب من Gemini</span>
                   </button>
                   <button 
                     onClick={() => setIsScraperOpen(true)}
-                    className="flex items-center gap-2 bg-bg-primary text-text-secondary px-4 py-2 rounded-xl hover:bg-bg-secondary transition-colors border border-border-primary"
+                    className="flex items-center gap-2 bg-bg-primary text-text-secondary p-2 sm:px-4 sm:py-2 rounded-xl hover:bg-bg-secondary transition-colors border border-border-primary"
                     title="سحب من رابط"
                   >
-                    <Link2 size={20} />
-                    <span className="hidden sm:inline">سحب من رابط</span>
+                    <Link2 size={18} className="sm:w-5 sm:h-5" />
+                    <span className="hidden md:inline">سحب من رابط</span>
                   </button>
                   <button 
                     onClick={() => setIsAddingNovel(true)}
-                    className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-500/20"
+                    className="flex items-center gap-2 bg-emerald-600 text-white p-2 sm:px-4 sm:py-2 rounded-xl hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-500/20"
                   >
-                    <Plus size={20} />
-                    <span>إضافة رواية</span>
+                    <Plus size={18} className="sm:w-5 sm:h-5" />
+                    <span className="hidden sm:inline">إضافة رواية</span>
                   </button>
                 </div>
               } />
               <Route path="/novel/:id" element={
                 <button 
                   onClick={() => navigate('/')}
-                  className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
+                  className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors text-sm sm:text-base"
                 >
-                  <span>العودة للرئيسية</span>
-                  <ChevronLeft size={20} />
+                  <span>العودة</span>
+                  <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
                 </button>
               } />
             </Routes>
 
-            <div className="h-6 w-[1px] bg-border-primary mx-2" />
+            <div className="h-5 w-[1px] bg-border-primary mx-1 sm:mx-2" />
 
-            <button 
-              onClick={toggleTheme}
-              className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
-              title={theme === 'light' ? 'الوضع الليلي' : 'الوضع النهاري'}
-            >
-              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            </button>
+            <div className="flex items-center gap-1 sm:gap-2">
+              <button 
+                onClick={toggleTheme}
+                className="p-1.5 sm:p-2 text-text-secondary hover:text-emerald-600 transition-colors"
+                title={theme === 'light' ? 'الوضع الليلي' : 'الوضع النهاري'}
+              >
+                {theme === 'light' ? <Moon size={18} className="sm:w-5 sm:h-5" /> : <Sun size={18} className="sm:w-5 sm:h-5" />}
+              </button>
 
-            <button 
-              onClick={() => navigate('/backup')}
-              className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
-              title="النسخ الاحتياطي"
-            >
-              <Database size={20} />
-            </button>
+              <button 
+                onClick={() => navigate('/backup')}
+                className="p-1.5 sm:p-2 text-text-secondary hover:text-emerald-600 transition-colors"
+                title="النسخ الاحتياطي"
+              >
+                <Database size={18} className="sm:w-5 sm:h-5" />
+              </button>
 
-            <button 
-              onClick={() => {
-                if (confirm('هل تريد تسجيل الخروج؟')) {
-                  localStorage.removeItem('app_authenticated');
-                  window.location.reload();
-                }
-              }}
-              className="p-2 text-text-secondary hover:text-red-500 transition-colors"
-              title="تسجيل الخروج"
-            >
-              <LogOut size={20} />
-            </button>
+              <button 
+                onClick={() => {
+                  if (confirm('هل تريد تسجيل الخروج؟')) {
+                    localStorage.removeItem('app_authenticated');
+                    window.location.reload();
+                  }
+                }}
+                className="p-1.5 sm:p-2 text-text-secondary hover:text-red-500 transition-colors"
+                title="تسجيل الخروج"
+              >
+                <LogOut size={18} className="sm:w-5 sm:h-5" />
+              </button>
+            </div>
           </div>
         </div>
       </header>

@@ -28,12 +28,12 @@ export const NovelList: React.FC<NovelListProps> = ({
   return (
     <div className="space-y-8">
       {/* Search Bar */}
-      <div className="relative max-w-md mx-auto">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 text-text-secondary" size={20} />
+      <div className="relative max-w-md mx-auto px-4 sm:px-0">
+        <Search className="absolute right-7 sm:right-4 top-1/2 -translate-y-1/2 text-text-secondary" size={18} />
         <input 
           type="text"
           placeholder="بحث عن رواية..."
-          className="w-full p-4 pr-12 bg-bg-primary border border-border-primary rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-text-primary"
+          className="w-full p-3 sm:p-4 pr-10 sm:pr-12 bg-bg-primary border border-border-primary rounded-2xl shadow-sm focus:ring-2 focus:ring-emerald-500 outline-none transition-all text-text-primary text-sm sm:text-base"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />
@@ -44,7 +44,7 @@ export const NovelList: React.FC<NovelListProps> = ({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: -20 }}
-        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6"
+        className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-6"
       >
         {isLoading ? (
           <div className="col-span-full flex flex-col items-center justify-center py-20 text-text-secondary">

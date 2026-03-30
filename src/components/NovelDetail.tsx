@@ -939,20 +939,20 @@ export const NovelDetail: React.FC = () => {
       </AnimatePresence>
 
       {/* Novel Header Info */}
-      <div className="flex flex-col md:flex-row gap-8 items-start bg-bg-primary p-6 rounded-3xl border border-border-primary shadow-sm">
+      <div className="flex flex-col md:flex-row gap-6 sm:gap-8 items-center sm:items-start bg-bg-primary p-4 sm:p-6 rounded-3xl border border-border-primary shadow-sm">
         <img 
           src={novel.cover_url} 
           alt={novel.title} 
-          className="w-40 h-60 object-cover rounded-xl shadow-lg"
+          className="w-32 h-48 sm:w-40 sm:h-60 object-cover rounded-xl shadow-lg"
           referrerPolicy="no-referrer"
         />
-        <div className="flex-1 space-y-4">
-          <div className="flex items-center gap-3">
+        <div className="flex-1 space-y-4 w-full text-center sm:text-right">
+          <div className="flex flex-col sm:flex-row items-center sm:items-start gap-3">
             {isEditingTitle ? (
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-2 w-full">
                 <input 
                   type="text"
-                  className="text-3xl font-black text-text-primary bg-bg-secondary border border-border-primary rounded-xl px-4 py-1 w-full outline-none focus:ring-2 focus:ring-emerald-500"
+                  className="text-xl sm:text-3xl font-black text-text-primary bg-bg-secondary border border-border-primary rounded-xl px-4 py-1 w-full outline-none focus:ring-2 focus:ring-emerald-500"
                   value={editedTitle}
                   onChange={(e) => setEditedTitle(e.target.value)}
                   autoFocus
@@ -967,13 +967,13 @@ export const NovelDetail: React.FC = () => {
                   onClick={() => setIsEditingTitle(false)}
                   className="p-2 bg-bg-secondary text-text-secondary rounded-xl hover:bg-border-primary transition-colors"
                 >
-                  <Trash2 size={20} className="rotate-45" />
+                  <Plus size={20} className="rotate-45" />
                 </button>
               </div>
             ) : (
-              <div className="flex flex-col gap-1">
-                <div className="flex items-center gap-3">
-                  <h2 className="text-3xl font-black text-text-primary">{novel.title}</h2>
+              <div className="flex flex-col gap-1 w-full">
+                <div className="flex items-center justify-center sm:justify-start gap-3">
+                  <h2 className="text-2xl sm:text-3xl font-black text-text-primary">{novel.title}</h2>
                   <button 
                     onClick={() => {
                       setEditedTitle(novel.title);
@@ -981,18 +981,18 @@ export const NovelDetail: React.FC = () => {
                     }}
                     className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
                   >
-                    <Edit size={20} />
+                    <Edit size={18} className="sm:w-5 sm:h-5" />
                   </button>
                 </div>
                 {novel.original_title && (
-                  <p className="text-text-secondary font-medium">{novel.original_title}</p>
+                  <p className="text-text-secondary font-medium text-sm sm:text-base">{novel.original_title}</p>
                 )}
                 {novel.source_url && (
                   <a 
                     href={novel.source_url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-emerald-600 text-sm hover:underline flex items-center gap-1"
+                    className="text-emerald-600 text-xs sm:text-sm hover:underline flex items-center justify-center sm:justify-start gap-1"
                   >
                     <ImageIcon size={14} />
                     رابط الرواية الأصلي
@@ -1003,10 +1003,10 @@ export const NovelDetail: React.FC = () => {
           </div>
 
           {/* Notes Section */}
-          <div className="mt-6 bg-bg-secondary rounded-xl p-4 border border-border-primary">
+          <div className="mt-4 sm:mt-6 bg-bg-secondary rounded-xl p-3 sm:p-4 border border-border-primary text-right">
             <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 text-text-primary font-bold">
-                <StickyNote size={18} className="text-emerald-600" />
+              <div className="flex items-center gap-2 text-text-primary font-bold text-sm sm:text-base">
+                <StickyNote size={16} className="text-emerald-600 sm:w-[18px] sm:h-[18px]" />
                 <span>ملاحظات الرواية</span>
               </div>
               {!isEditingNotes && (
@@ -1014,7 +1014,7 @@ export const NovelDetail: React.FC = () => {
                   onClick={() => setIsEditingNotes(true)}
                   className="text-text-secondary hover:text-emerald-600 transition-colors"
                 >
-                  <Edit size={16} />
+                  <Edit size={14} className="sm:w-4 sm:h-4" />
                 </button>
               )}
             </div>
@@ -1022,7 +1022,7 @@ export const NovelDetail: React.FC = () => {
             {isEditingNotes ? (
               <div className="space-y-3">
                 <textarea
-                  className="w-full bg-bg-primary border border-border-primary rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 min-h-[100px] text-text-primary"
+                  className="w-full bg-bg-primary border border-border-primary rounded-lg p-3 text-sm outline-none focus:ring-2 focus:ring-emerald-500 min-h-[80px] sm:min-h-[100px] text-text-primary"
                   value={editedNotes}
                   onChange={(e) => setEditedNotes(e.target.value)}
                   placeholder="أضف ملاحظاتك هنا..."
@@ -1030,53 +1030,53 @@ export const NovelDetail: React.FC = () => {
                 <div className="flex justify-end gap-2">
                   <button 
                     onClick={() => setIsEditingNotes(false)}
-                    className="px-3 py-1.5 text-sm text-text-secondary hover:text-text-primary"
+                    className="px-3 py-1.5 text-xs sm:text-sm text-text-secondary hover:text-text-primary"
                   >
                     إلغاء
                   </button>
                   <button 
                     onClick={handleUpdateNotes}
-                    className="bg-emerald-600 text-white px-4 py-1.5 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                    className="bg-emerald-600 text-white px-3 py-1.5 sm:px-4 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-1"
                   >
-                    <Check size={16} />
-                    <span>حفظ الملاحظات</span>
+                    <Check size={14} className="sm:w-4 sm:h-4" />
+                    <span>حفظ</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="text-text-secondary text-sm whitespace-pre-wrap leading-relaxed">
+              <div className="text-text-secondary text-xs sm:text-sm whitespace-pre-wrap leading-relaxed">
                 {novel.notes ? novel.notes : (
-                  <span className="text-text-secondary opacity-60 italic">لا توجد ملاحظات لهذه الرواية بعد.</span>
+                  <span className="text-text-secondary opacity-60 italic">لا توجد ملاحظات.</span>
                 )}
               </div>
             )}
           </div>
 
-          <div className="flex flex-wrap gap-3 mt-6">
-            <div className="bg-bg-secondary px-4 py-2 rounded-lg text-sm font-medium text-text-secondary flex items-center gap-2">
-              <span>الفصول المخزنة: {chapters.length}</span>
+          <div className="flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-3 mt-4 sm:mt-6">
+            <div className="bg-bg-secondary px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-2">
+              <span>المخزنة: {chapters.length}</span>
             </div>
             
             {isEditingTotalChapters ? (
               <div className="flex items-center gap-2 bg-bg-secondary px-2 py-1 rounded-lg">
                 <input 
                   type="number"
-                  className="w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-sm outline-none focus:ring-1 focus:ring-emerald-500 text-text-primary"
+                  className="w-16 sm:w-20 bg-bg-primary border border-border-primary rounded px-2 py-1 text-xs sm:text-sm outline-none focus:ring-1 focus:ring-emerald-500 text-text-primary"
                   value={editedTotalChapters}
                   onChange={(e) => setEditedTotalChapters(e.target.value)}
                   placeholder="الإجمالي"
                   autoFocus
                 />
                 <button onClick={handleUpdateTotalChapters} className="text-emerald-600 hover:text-emerald-700">
-                  <Check size={16} />
+                  <Check size={14} className="sm:w-4 sm:h-4" />
                 </button>
                 <button onClick={() => setIsEditingTotalChapters(false)} className="text-text-secondary hover:text-text-primary">
-                  <Plus size={16} className="rotate-45" />
+                  <Plus size={14} className="rotate-45 sm:w-4 sm:h-4" />
                 </button>
               </div>
             ) : (
-              <div className="bg-bg-secondary px-4 py-2 rounded-lg text-sm font-medium text-text-secondary flex items-center gap-2">
-                <span>إجمالي الفصول: {novel.total_chapters || 'غير محدد'}</span>
+              <div className="bg-bg-secondary px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium text-text-secondary flex items-center gap-2">
+                <span>الإجمالي: {novel.total_chapters || '؟'}</span>
                 <button 
                   onClick={() => {
                     setEditedTotalChapters(novel.total_chapters?.toString() || '');
@@ -1084,21 +1084,21 @@ export const NovelDetail: React.FC = () => {
                   }}
                   className="text-text-secondary hover:text-emerald-600 transition-colors"
                 >
-                  <Edit size={14} />
+                  <Edit size={12} className="sm:w-[14px] sm:h-[14px]" />
                 </button>
               </div>
             )}
-            <div className="bg-emerald-500/10 px-4 py-2 rounded-lg text-sm font-medium text-emerald-500 flex items-center gap-2">
+            <div className="bg-emerald-500/10 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium text-emerald-500 flex items-center gap-2">
               <span>المترجمة: {translatedCount}</span>
-              <span className="text-xs opacity-60">({Math.round((translatedCount / (novel.total_chapters || chapters.length || 1)) * 100)}%)</span>
+              <span className="text-[10px] sm:text-xs opacity-60">({Math.round((translatedCount / (novel.total_chapters || chapters.length || 1)) * 100)}%)</span>
             </div>
             {nextUntranslated && (
               <button 
                 onClick={handleGoToNextUntranslated}
-                className="bg-stone-900 dark:bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-stone-800 dark:hover:bg-emerald-700 transition-colors flex items-center gap-2"
+                className="bg-stone-900 dark:bg-emerald-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-stone-800 dark:hover:bg-emerald-700 transition-colors flex items-center gap-2"
               >
-                <span>الفصل التالي للترجمة: {nextUntranslated.chapter_number}</span>
-                <ChevronRight size={16} />
+                <span>التالي: {nextUntranslated.chapter_number}</span>
+                <ChevronRight size={14} className="sm:w-4 sm:h-4" />
               </button>
             )}
             <button 
@@ -1107,29 +1107,29 @@ export const NovelDetail: React.FC = () => {
                 setDownloadRangeEnd(chapters.length.toString());
                 setShowDownloadModal(true);
               }}
-              className="bg-emerald-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm"
+              className="bg-emerald-600 text-white px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-emerald-700 transition-colors flex items-center gap-2 shadow-sm"
             >
-              <Download size={16} />
-              <span>تحميل الترجمة (.txt)</span>
+              <Download size={14} className="sm:w-4 sm:h-4" />
+              <span>تحميل (.txt)</span>
             </button>
             <button 
               onClick={checkMissingChapters}
-              className="bg-bg-secondary text-text-secondary px-4 py-2 rounded-lg text-sm font-medium hover:bg-border-primary transition-colors flex items-center gap-2 border border-border-primary"
+              className="bg-bg-secondary text-text-secondary px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-border-primary transition-colors flex items-center gap-2 border border-border-primary"
               title="فحص الفصول المفقودة"
             >
-              <FileSearch size={16} />
+              <FileSearch size={14} className="sm:w-4 sm:h-4" />
               <span>فحص النقص</span>
             </button>
           </div>
           
-          <div className="pt-4 flex gap-4">
+          <div className="pt-4 flex flex-wrap justify-center sm:justify-start gap-2 sm:gap-4">
             <motion.label 
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-stone-900 dark:bg-emerald-600 text-white px-6 py-3 rounded-xl cursor-pointer hover:bg-stone-800 dark:hover:bg-emerald-700 transition-all shadow-lg"
+              className="flex items-center gap-2 bg-stone-900 dark:bg-emerald-600 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl cursor-pointer hover:bg-stone-800 dark:hover:bg-emerald-700 transition-all shadow-lg text-xs sm:text-sm"
             >
-              <Upload size={20} />
-              <span>رفع ملف الرواية (TXT / EPUB)</span>
+              <Upload size={18} className="sm:w-5 sm:h-5" />
+              <span>رفع ملف (TXT/EPUB)</span>
               <input 
                 type="file" 
                 accept=".txt,.epub" 
@@ -1142,59 +1142,59 @@ export const NovelDetail: React.FC = () => {
               onClick={() => setIsScraperOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-bg-primary text-text-primary px-6 py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm"
+              className="flex items-center gap-2 bg-bg-primary text-text-primary px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm text-xs sm:text-sm"
             >
-              <Link2 size={20} className="text-emerald-600" />
-              <span>سحب من رابط</span>
+              <Link2 size={18} className="text-emerald-600 sm:w-5 sm:h-5" />
+              <span>سحب رابط</span>
             </motion.button>
             <motion.button 
               onClick={() => setIsGeminiTranslateOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-emerald-600 text-white px-6 py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20"
+              className="flex items-center gap-2 bg-emerald-600 text-white px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-500/20 text-xs sm:text-sm"
             >
-              <Sparkles size={20} />
-              <span>ترجمة بواسطة Gemini</span>
+              <Sparkles size={18} className="sm:w-5 sm:h-5" />
+              <span>ترجمة Gemini</span>
             </motion.button>
             <motion.button 
               onClick={() => setShowEmbeddedBrowser(!showEmbeddedBrowser)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
               className={cn(
-                "flex items-center gap-2 px-6 py-3 rounded-xl border transition-all shadow-sm",
+                "flex items-center gap-2 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl border transition-all shadow-sm text-xs sm:text-sm",
                 showEmbeddedBrowser 
                   ? "bg-emerald-600 text-white border-emerald-600" 
                   : "bg-bg-primary text-text-primary border-border-primary hover:bg-bg-secondary"
               )}
               title="فتح المتصفح المدمج للموقع الأصلي"
             >
-              <Globe size={20} className={showEmbeddedBrowser ? "text-white" : "text-blue-600"} />
-              <span>المتصفح المدمج</span>
+              <Globe size={18} className={cn("sm:w-5 sm:h-5", showEmbeddedBrowser ? "text-white" : "text-blue-600")} />
+              <span>المتصفح</span>
             </motion.button>
             <motion.button 
               onClick={() => setIsCleaningRulesOpen(true)}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-bg-primary text-text-primary px-6 py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm"
+              className="flex items-center gap-2 bg-bg-primary text-text-primary px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl border border-border-primary hover:bg-bg-secondary transition-all shadow-sm text-xs sm:text-sm"
               title="قواعد تنظيف الفصول"
             >
-              <Settings2 size={20} className="text-amber-600" />
-              <span>تنظيف الفصول</span>
+              <Settings2 size={18} className="text-amber-600 sm:w-5 sm:h-5" />
+              <span>تنظيف</span>
             </motion.button>
             <motion.button 
               onClick={enterQuickCopyMode}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="flex items-center gap-2 bg-emerald-600/10 text-emerald-600 px-6 py-3 rounded-xl border border-emerald-600/20 hover:bg-emerald-600/20 transition-all shadow-sm"
+              className="flex items-center gap-2 bg-emerald-600/10 text-emerald-600 px-4 py-2.5 sm:px-6 sm:py-3 rounded-xl border border-emerald-600/20 hover:bg-emerald-600/20 transition-all shadow-sm text-xs sm:text-sm"
               title="وضع النسخ السريع"
             >
-              <Zap size={20} fill="currentColor" />
-              <span>النسخ السريع</span>
+              <Zap size={18} className="sm:w-5 sm:h-5" fill="currentColor" />
+              <span>نسخ سريع</span>
             </motion.button>
             {isUploading && (
-              <div className="flex items-center gap-2 text-emerald-600 font-medium">
-                <Loader2 className="animate-spin" size={20} />
-                <span>جاري التقسيم والرفع...</span>
+              <div className="flex items-center gap-2 text-emerald-600 font-medium text-xs sm:text-sm">
+                <Loader2 className="animate-spin sm:w-5 sm:h-5" size={18} />
+                <span>جاري الرفع...</span>
               </div>
             )}
           </div>
