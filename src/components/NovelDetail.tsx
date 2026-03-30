@@ -33,7 +33,8 @@ import {
   Minimize2,
   RefreshCw,
   Globe,
-  Sparkles
+  Sparkles,
+  Zap
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { clsx, type ClassValue } from 'clsx';
@@ -93,6 +94,8 @@ export const NovelDetail: React.FC = () => {
   const [showEmbeddedBrowser, setShowEmbeddedBrowser] = useState(false);
   const [browserWidth, setBrowserWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
+  const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
+  const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -800,6 +803,31 @@ export const NovelDetail: React.FC = () => {
     setShowCheckModal(true);
   };
 
+  const enterQuickCopyMode = () => {
+    const lastTranslatedChapter = [...chapters]
+      .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
+      .sort((a, b) => b.chapter_number - a.chapter_number)[0];
+    const lastNum = lastTranslatedChapter ? lastTranslatedChapter.chapter_number : 1;
+    setQuickCopyNumbers([lastNum, lastNum + 1, lastNum + 2, lastNum + 3]);
+    setIsQuickCopyMode(true);
+  };
+
+  const handleQuickCopy = async (num: number) => {
+    const chapter = chapters.find(c => c.chapter_number === num);
+    if (chapter) {
+      await copyToClipboard(`${chapter.title}\n\n${chapter.content_original}`);
+      
+      // Update the numbers: remove current, add next
+      setQuickCopyNumbers(prev => {
+        const nextNum = Math.max(...prev) + 1;
+        const newNums = prev.map(n => n === num ? nextNum : n).sort((a, b) => a - b);
+        return newNums;
+      });
+    } else {
+      alert(`الفصل ${num} غير موجود في المستودع`);
+    }
+  };
+
   const filteredChapters = chapters.filter(chap => {
     const matchesSearch = chap.content_original.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (chap.title && chap.title.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -838,6 +866,78 @@ export const NovelDetail: React.FC = () => {
       exit={{ opacity: 0, x: -20 }}
       className="space-y-8"
     >
+      {/* Quick Copy Mode Overlay */}
+      <AnimatePresence>
+        {isQuickCopyMode && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] bg-bg-primary/95 backdrop-blur-md flex flex-col items-center justify-center p-6"
+          >
+            <button 
+              onClick={() => setIsQuickCopyMode(false)}
+              className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 sm:p-4 bg-bg-secondary border border-border-primary rounded-full text-text-secondary hover:text-red-500 transition-all shadow-lg"
+            >
+              <Plus size={24} className="rotate-45 sm:w-8 sm:h-8" />
+            </button>
+            
+            <div className="text-center mb-8 sm:mb-12 space-y-2 sm:space-y-4">
+              <motion.div 
+                initial={{ y: -20 }}
+                animate={{ y: 0 }}
+                className="w-12 h-12 sm:w-20 sm:h-20 bg-emerald-600 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20 mb-4 sm:mb-6"
+              >
+                <Zap size={24} className="sm:w-10 sm:h-10" fill="currentColor" />
+              </motion.div>
+              <h2 className="text-2xl sm:text-4xl font-black text-text-primary">وضع النسخ السريع</h2>
+              <p className="text-text-secondary text-sm sm:text-lg font-medium">اضغط على الفصل لنسخ النص الأصلي</p>
+            </div>
+
+            <div className="flex items-center gap-3 bg-bg-secondary p-2 px-4 rounded-2xl border border-border-primary mb-8 shadow-sm">
+              <span className="text-text-secondary text-xs sm:text-sm font-bold">البدء من الفصل:</span>
+              <input
+                type="number"
+                className="w-16 sm:w-24 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-2 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors"
+                value={quickCopyNumbers[0] || ''}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value);
+                  if (!isNaN(val)) {
+                    setQuickCopyNumbers([val, val + 1, val + 2, val + 3]);
+                  }
+                }}
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full max-w-2xl">
+              {quickCopyNumbers.map((num) => (
+                <motion.button
+                  key={num}
+                  layout
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  whileHover={{ scale: 1.05, translateY: -5 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleQuickCopy(num)}
+                  className="group relative overflow-hidden bg-bg-secondary border-2 border-border-primary p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl hover:border-emerald-500 transition-all flex flex-col items-center gap-1 sm:gap-4"
+                >
+                  <div className="absolute top-0 right-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-500 rounded-bl-xl sm:rounded-bl-2xl opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Copy size={14} className="sm:w-5 sm:h-5" />
+                  </div>
+                  <span className="text-[10px] sm:text-sm font-bold text-text-secondary uppercase tracking-widest">الفصل</span>
+                  <span className="text-3xl sm:text-6xl font-black text-text-primary group-hover:text-emerald-600 transition-colors">{num}</span>
+                </motion.button>
+              ))}
+            </div>
+            
+            <div className="mt-8 sm:mt-16 text-text-secondary text-xs sm:text-sm font-medium flex items-center gap-2 bg-bg-secondary px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl border border-border-primary">
+              <Sparkles size={16} className="sm:w-5 sm:h-5 text-emerald-500" />
+              <span>سيتم نسخ النص الأصلي تلقائياً</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Novel Header Info */}
       <div className="flex flex-col md:flex-row gap-8 items-start bg-bg-primary p-6 rounded-3xl border border-border-primary shadow-sm">
         <img 
@@ -1080,6 +1180,16 @@ export const NovelDetail: React.FC = () => {
             >
               <Settings2 size={20} className="text-amber-600" />
               <span>تنظيف الفصول</span>
+            </motion.button>
+            <motion.button 
+              onClick={enterQuickCopyMode}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="flex items-center gap-2 bg-emerald-600/10 text-emerald-600 px-6 py-3 rounded-xl border border-emerald-600/20 hover:bg-emerald-600/20 transition-all shadow-sm"
+              title="وضع النسخ السريع"
+            >
+              <Zap size={20} fill="currentColor" />
+              <span>النسخ السريع</span>
             </motion.button>
             {isUploading && (
               <div className="flex items-center gap-2 text-emerald-600 font-medium">
