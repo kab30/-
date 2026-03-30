@@ -132,7 +132,7 @@ ${chapter.content_original}`;
 
     setIsTranslating(false);
     if (!error) {
-      alert('تمت الترجمة بنجاح!');
+      // alert('تمت الترجمة بنجاح!');
       onSuccess();
       onClose();
     }

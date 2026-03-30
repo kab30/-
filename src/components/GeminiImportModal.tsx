@@ -227,7 +227,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
         setSaveProgress(prev => ({ ...prev, current: savedCount }));
       }
 
-      alert(`تم حفظ ${savedCount} فصل بنجاح!`);
+      // alert(`تم حفظ ${savedCount} فصل بنجاح!`);
       onClose();
     } catch (err: any) {
       console.error('Save error:', err);
@@ -636,7 +636,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                       onClick={() => {
                         const text = `ترجم الفصول التالية من [اللغة الأصلية] إلى العربية بأسلوب أدبي رفيع.\nالتزم بالقواعد التالية:\n1. ابدأ كل فصل بعبارة "الفصل [الرقم]" في سطر مستقل.\n2. حافظ على أسماء الشخصيات والأماكن كما هي أو ترجمها بشكل متسق.\n3. لا تضف أي تعليقات جانبية أو مقدمات، فقط محتوى الفصول.\n4. تأكد من أن كل فصل يحتوي على النص الكامل.\n\nالنص المراد ترجمته:\n[الصق النص هنا]`;
                         navigator.clipboard.writeText(text);
-                        alert('تم نسخ البرومت');
+                        // alert('تم نسخ البرومت');
                       }}
                       className="absolute top-4 left-4 p-2 bg-bg-secondary border border-border-primary rounded-lg text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-500"
                     >
@@ -665,7 +665,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
                       onClick={() => {
                         const text = `لديك نص يحتوي على فصول رواية باللغتين [الأصلية] والعربية.\nأعد صياغة النص بحيث يظهر كل فصل بالشكل التالي:\nالفصل [الرقم]: [العنوان]\n[النص الأصلي]\n---\n[النص المترجم]\n\nتأكد من فصل كل فصل عن الآخر بوضوح.`;
                         navigator.clipboard.writeText(text);
-                        alert('تم نسخ البرومت');
+                        // alert('تم نسخ البرومت');
                       }}
                       className="absolute top-4 left-4 p-2 bg-bg-secondary border border-border-primary rounded-lg text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity hover:text-blue-500"
                     >

@@ -347,7 +347,7 @@ export const NovelDetail: React.FC = () => {
     if (hasError) {
       alert('حدث خطأ أثناء رفع بعض الفصول. يرجى التحقق من القائمة.');
     } else {
-      alert(`تم رفع ${finalChaptersToUpload.length} فصل بنجاح.`);
+      // alert(`تم رفع ${finalChaptersToUpload.length} فصل بنجاح.`);
       setShowUploadPreview(false);
       setPendingChapters([]);
       setSelectedPendingIndices(new Set());
@@ -599,7 +599,7 @@ export const NovelDetail: React.FC = () => {
     if (error) {
       alert('خطأ في حفظ الترجمة');
     } else {
-      alert('تم حفظ الترجمة بنجاح');
+      // alert('تم حفظ الترجمة بنجاح');
       const updatedChapters = chapters.map(c => c.id === selectedChapter.id ? { ...c, content_arabic: arabicContent } : c);
       setChapters(updatedChapters);
       
@@ -703,12 +703,10 @@ export const NovelDetail: React.FC = () => {
       if (id) {
         setCopiedId(id);
         setTimeout(() => setCopiedId(null), 2000);
-      } else {
-        alert('تم النسخ إلى الحافظة');
       }
     } catch (err) {
       console.error('Failed to copy: ', err);
-      alert('فشل النسخ. يرجى المحاولة مرة أخرى أو النسخ يدوياً.');
+      // alert('فشل النسخ. يرجى المحاولة مرة أخرى أو النسخ يدوياً.');
     }
   };
 
@@ -739,7 +737,7 @@ export const NovelDetail: React.FC = () => {
         
         setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, content_original: text } : c));
         setSelectedChapter(prev => prev ? { ...prev, content_original: text } : null);
-        alert('تم تحديث النص الأصلي بنجاح');
+        // alert('تم تحديث النص الأصلي بنجاح');
       }
     } catch (err) {
       console.error('Failed to read clipboard contents: ', err);
