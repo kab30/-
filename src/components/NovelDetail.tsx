@@ -95,7 +95,7 @@ export const NovelDetail: React.FC = () => {
   const [browserWidth, setBrowserWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
   const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
-  const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
+  const [quickCopyStart, setQuickCopyStart] = useState<number | ''>('');
 
   useEffect(() => {
     if (id) {
@@ -806,7 +806,7 @@ export const NovelDetail: React.FC = () => {
       .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
       .sort((a, b) => b.chapter_number - a.chapter_number)[0];
     const lastNum = lastTranslatedChapter ? lastTranslatedChapter.chapter_number : 1;
-    setQuickCopyNumbers([lastNum, lastNum + 1, lastNum + 2, lastNum + 3]);
+    setQuickCopyStart(lastNum);
     setIsQuickCopyMode(true);
   };
 
@@ -897,18 +897,21 @@ export const NovelDetail: React.FC = () => {
               <input
                 type="number"
                 className="w-16 sm:w-24 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-2 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors"
-                value={quickCopyNumbers[0] || ''}
+                value={quickCopyStart}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
-                    setQuickCopyNumbers([val, val + 1, val + 2, val + 3]);
-                  }
+                  setQuickCopyStart(isNaN(val) ? '' : val);
                 }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full max-w-2xl">
-              {quickCopyNumbers.map((num) => (
+              {typeof quickCopyStart === 'number' && chapters
+                .map(c => c.chapter_number)
+                .filter(num => num >= quickCopyStart)
+                .sort((a, b) => a - b)
+                .slice(0, 4)
+                .map((num) => (
                 <motion.button
                   key={num}
                   layout
