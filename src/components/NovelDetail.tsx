@@ -95,7 +95,7 @@ export const NovelDetail: React.FC = () => {
   const [browserWidth, setBrowserWidth] = useState(500);
   const [isResizing, setIsResizing] = useState(false);
   const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
-  const [quickCopyStart, setQuickCopyStart] = useState<number | ''>('');
+  const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
 
   useEffect(() => {
     if (id) {
@@ -806,7 +806,14 @@ export const NovelDetail: React.FC = () => {
       .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
       .sort((a, b) => b.chapter_number - a.chapter_number)[0];
     const lastNum = lastTranslatedChapter ? lastTranslatedChapter.chapter_number : 1;
-    setQuickCopyStart(lastNum);
+    
+    const initialNums = chapters
+      .map(c => c.chapter_number)
+      .filter(num => num >= lastNum)
+      .sort((a, b) => a - b)
+      .slice(0, 4);
+      
+    setQuickCopyNumbers(initialNums);
     setIsQuickCopyMode(true);
   };
 
@@ -815,11 +822,19 @@ export const NovelDetail: React.FC = () => {
     if (chapter) {
       await copyToClipboard(`${chapter.title}\n\n${chapter.content_original}`);
       
-      // Update the numbers: remove current, add next
+      // Update the numbers: replace current with next available
       setQuickCopyNumbers(prev => {
-        const nextNum = Math.max(...prev) + 1;
-        const newNums = prev.map(n => n === num ? nextNum : n).sort((a, b) => a - b);
-        return newNums;
+        const currentMax = Math.max(...prev);
+        const nextChapter = chapters
+          .map(c => c.chapter_number)
+          .filter(n => n > currentMax)
+          .sort((a, b) => a - b)[0];
+        
+        if (nextChapter) {
+          return prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
+        } else {
+          return prev.filter(n => n !== num).sort((a, b) => a - b);
+        }
       });
     } else {
       alert(`الفصل ${num} غير موجود في المستودع`);
@@ -897,21 +912,25 @@ export const NovelDetail: React.FC = () => {
               <input
                 type="number"
                 className="w-16 sm:w-24 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-2 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors"
-                value={quickCopyStart}
+                value={quickCopyNumbers[0] || ''}
                 onChange={(e) => {
                   const val = parseInt(e.target.value);
-                  setQuickCopyStart(isNaN(val) ? '' : val);
+                  if (!isNaN(val)) {
+                    const newNums = chapters
+                      .map(c => c.chapter_number)
+                      .filter(num => num >= val)
+                      .sort((a, b) => a - b)
+                      .slice(0, 4);
+                    setQuickCopyNumbers(newNums);
+                  } else {
+                    setQuickCopyNumbers([]);
+                  }
                 }}
               />
             </div>
 
             <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full max-w-2xl">
-              {typeof quickCopyStart === 'number' && chapters
-                .map(c => c.chapter_number)
-                .filter(num => num >= quickCopyStart)
-                .sort((a, b) => a - b)
-                .slice(0, 4)
-                .map((num) => (
+              {quickCopyNumbers.map((num) => (
                 <motion.button
                   key={num}
                   layout
