@@ -848,8 +848,8 @@ export const NovelDetail: React.FC = () => {
     const currentState = quickCopyStates[num] || 'idle';
 
     if (currentState === 'idle') {
-      // First Click: Copy chapter number and turn red
-      await copyToClipboard(num.toString());
+      // First Click: Copy chapter content and turn red
+      await copyToClipboard(`${chapter.title}\n\n${chapter.content_original}`);
       setQuickCopyStates(prev => ({ ...prev, [num]: 'copied' }));
     } else if (currentState === 'copied') {
       // Second Click: Try to paste and save automatically
