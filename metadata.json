@@ -1,5 +1,5 @@
 {
   "name": "مستودع الروايات",
   "description": "موقع لتنظيم وترجمة الروايات مع ميزة الجلب الذكي من Gemini وتقسيم تلقائي للفصول.",
-  "requestFramePermissions": []
+  "requestFramePermissions": ["clipboard-read", "clipboard-write"]
 }

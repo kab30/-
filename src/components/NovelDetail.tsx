@@ -96,6 +96,7 @@ export const NovelDetail: React.FC = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
   const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
+  const [quickCopyStates, setQuickCopyStates] = useState<Record<number, 'idle' | 'copied' | 'saving'>>({});
 
   useEffect(() => {
     if (id) {
@@ -712,21 +713,42 @@ export const NovelDetail: React.FC = () => {
 
   const handlePaste = async () => {
     try {
-      const text = await navigator.clipboard.readText();
+      let text = "";
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (e) {
+          console.error("Clipboard read failed, using prompt fallback", e);
+          text = prompt("يرجى لصق النص هنا:") || "";
+        }
+      } else {
+        text = prompt("يرجى لصق النص هنا:") || "";
+      }
+
       if (text) {
         setArabicContent(text);
       }
     } catch (err) {
       console.error('Failed to read clipboard contents: ', err);
-      // Fallback for some browsers or if permission is denied
-      alert('فشل في قراءة الحافظة. يرجى التأكد من منح الإذن للمتصفح أو استخدام Ctrl+V يدوياً.');
+      alert('فشل في قراءة الحافظة. يرجى استخدام Ctrl+V يدوياً.');
     }
   };
 
   const handlePasteToOriginal = async () => {
     if (!selectedChapter) return;
     try {
-      const text = await navigator.clipboard.readText();
+      let text = "";
+      if (navigator.clipboard && window.isSecureContext) {
+        try {
+          text = await navigator.clipboard.readText();
+        } catch (e) {
+          console.error("Clipboard read failed, using prompt fallback", e);
+          text = prompt("يرجى لصق النص الأصلي هنا:") || "";
+        }
+      } else {
+        text = prompt("يرجى لصق النص الأصلي هنا:") || "";
+      }
+
       if (text) {
         const { error } = await supabase
           .from('chapters')
@@ -737,11 +759,10 @@ export const NovelDetail: React.FC = () => {
         
         setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, content_original: text } : c));
         setSelectedChapter(prev => prev ? { ...prev, content_original: text } : null);
-        // alert('تم تحديث النص الأصلي بنجاح');
       }
     } catch (err) {
       console.error('Failed to read clipboard contents: ', err);
-      alert('فشل في قراءة الحافظة. يرجى التأكد من منح الإذن للمتصفح أو استخدام Ctrl+V يدوياً.');
+      alert('فشل في قراءة الحافظة. يرجى استخدام Ctrl+V يدوياً.');
     }
   };
 
@@ -819,25 +840,77 @@ export const NovelDetail: React.FC = () => {
 
   const handleQuickCopy = async (num: number) => {
     const chapter = chapters.find(c => c.chapter_number === num);
-    if (chapter) {
-      await copyToClipboard(`${chapter.title}\n\n${chapter.content_original}`);
-      
-      // Update the numbers: replace current with next available
-      setQuickCopyNumbers(prev => {
-        const currentMax = Math.max(...prev);
-        const nextChapter = chapters
-          .map(c => c.chapter_number)
-          .filter(n => n > currentMax)
-          .sort((a, b) => a - b)[0];
-        
-        if (nextChapter) {
-          return prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
-        } else {
-          return prev.filter(n => n !== num).sort((a, b) => a - b);
-        }
-      });
-    } else {
+    if (!chapter) {
       alert(`الفصل ${num} غير موجود في المستودع`);
+      return;
+    }
+
+    const currentState = quickCopyStates[num] || 'idle';
+
+    if (currentState === 'idle') {
+      // First Click: Copy chapter number and turn red
+      await copyToClipboard(num.toString());
+      setQuickCopyStates(prev => ({ ...prev, [num]: 'copied' }));
+    } else if (currentState === 'copied') {
+      // Second Click: Try to paste and save automatically
+      try {
+        setQuickCopyStates(prev => ({ ...prev, [num]: 'saving' }));
+        
+        let pastedText = "";
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            pastedText = await navigator.clipboard.readText();
+          } else {
+            throw new Error("Clipboard API not available");
+          }
+        } catch (e) {
+          console.error("Automatic clipboard read failed:", e);
+          alert("فشل اللصق التلقائي. يرجى التأكد من منح إذن الوصول للحافظة في المتصفح، أو استخدم زر اللصق اليدوي في صفحة الفصل.");
+          setQuickCopyStates(prev => ({ ...prev, [num]: 'copied' }));
+          return;
+        }
+
+        if (pastedText && pastedText.trim().length > 0) {
+          // Save the translation
+          const { error } = await supabase
+            .from('chapters')
+            .update({ content_arabic: pastedText })
+            .eq('id', chapter.id);
+
+          if (error) throw error;
+
+          // Update local state
+          setChapters(prev => prev.map(c => c.id === chapter.id ? { ...c, content_arabic: pastedText } : c));
+          
+          // Advance logic
+          setQuickCopyNumbers(prev => {
+            const currentMax = Math.max(...prev);
+            const nextChapter = chapters
+              .map(c => c.chapter_number)
+              .filter(n => n > currentMax)
+              .sort((a, b) => a - b)[0];
+            
+            if (nextChapter) {
+              return prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
+            } else {
+              return prev.filter(n => n !== num).sort((a, b) => a - b);
+            }
+          });
+          
+          // Reset state for this number
+          setQuickCopyStates(prev => {
+            const newState = { ...prev };
+            delete newState[num];
+            return newState;
+          });
+        } else {
+          alert("الحافظة فارغة! يرجى نسخ النص المترجم أولاً.");
+          setQuickCopyStates(prev => ({ ...prev, [num]: 'copied' }));
+        }
+      } catch (err) {
+        console.error("Failed to save translation in Quick Copy Mode:", err);
+        setQuickCopyStates(prev => ({ ...prev, [num]: 'copied' }));
+      }
     }
   };
 
@@ -939,13 +1012,29 @@ export const NovelDetail: React.FC = () => {
                   whileHover={{ scale: 1.05, translateY: -5 }}
                   whileTap={{ scale: 0.95 }}
                   onClick={() => handleQuickCopy(num)}
-                  className="group relative overflow-hidden bg-bg-secondary border-2 border-border-primary p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl hover:border-emerald-500 transition-all flex flex-col items-center gap-1 sm:gap-4"
+                  className={`group relative overflow-hidden border-2 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl transition-all flex flex-col items-center gap-1 sm:gap-4 ${
+                    quickCopyStates[num] === 'copied' 
+                      ? "bg-red-500/10 border-red-500 text-red-600" 
+                      : quickCopyStates[num] === 'saving'
+                        ? "bg-emerald-500/10 border-emerald-500 text-emerald-600"
+                        : "bg-bg-secondary border-border-primary hover:border-emerald-500"
+                  }`}
                 >
-                  <div className="absolute top-0 right-0 p-2 sm:p-3 bg-emerald-500/10 text-emerald-500 rounded-bl-xl sm:rounded-bl-2xl opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Copy size={14} className="sm:w-5 sm:h-5" />
+                  <div className={`absolute top-0 right-0 p-2 sm:p-3 rounded-bl-xl sm:rounded-bl-2xl transition-opacity ${
+                    quickCopyStates[num] === 'copied' ? "bg-red-500/20 text-red-500 opacity-100" : "bg-emerald-500/10 text-emerald-500 opacity-0 group-hover:opacity-100"
+                  }`}>
+                    {quickCopyStates[num] === 'copied' ? <Zap size={14} className="sm:w-5 sm:h-5" /> : <Copy size={14} className="sm:w-5 sm:h-5" />}
                   </div>
                   <span className="text-[10px] sm:text-sm font-bold text-text-secondary uppercase tracking-widest">الفصل</span>
-                  <span className="text-3xl sm:text-6xl font-black text-text-primary group-hover:text-emerald-600 transition-colors">{num}</span>
+                  <span className={`text-3xl sm:text-6xl font-black transition-colors ${
+                    quickCopyStates[num] === 'copied' ? "text-red-600" : "text-text-primary group-hover:text-emerald-600"
+                  }`}>{num}</span>
+                  {quickCopyStates[num] === 'copied' && (
+                    <span className="text-[10px] sm:text-xs font-bold text-red-500 animate-pulse mt-1">اضغط للحفظ التلقائي</span>
+                  )}
+                  {quickCopyStates[num] === 'saving' && (
+                    <Loader2 className="animate-spin text-emerald-500" size={20} />
+                  )}
                 </motion.button>
               ))}
             </div>
