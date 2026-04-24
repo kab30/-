@@ -96,6 +96,7 @@ export const NovelDetail: React.FC = () => {
   const [isResizing, setIsResizing] = useState(false);
   const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
   const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
+  const [quickCopyStartInput, setQuickCopyStartInput] = useState<number | ''>('');
   const [quickCopyStates, setQuickCopyStates] = useState<Record<number, 'idle' | 'copied' | 'saving'>>({});
 
   useEffect(() => {
@@ -835,6 +836,7 @@ export const NovelDetail: React.FC = () => {
       .slice(0, 4);
       
     setQuickCopyNumbers(initialNums);
+    setQuickCopyStartInput(lastNum);
     setIsQuickCopyMode(true);
   };
 
@@ -890,11 +892,19 @@ export const NovelDetail: React.FC = () => {
               .filter(n => n > currentMax)
               .sort((a, b) => a - b)[0];
             
+            let nextNums;
             if (nextChapter) {
-              return prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
+              nextNums = prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
             } else {
-              return prev.filter(n => n !== num).sort((a, b) => a - b);
+              nextNums = prev.filter(n => n !== num).sort((a, b) => a - b);
             }
+
+            // Sync the start input with the first available number
+            if (nextNums.length > 0) {
+              setQuickCopyStartInput(nextNums[0]);
+            }
+            
+            return nextNums;
           });
           
           // Reset state for this number
@@ -985,10 +995,12 @@ export const NovelDetail: React.FC = () => {
               <input
                 type="number"
                 className="w-16 sm:w-24 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-2 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors"
-                value={quickCopyNumbers[0] || ''}
+                value={quickCopyStartInput}
+                onFocus={(e) => e.target.select()}
                 onChange={(e) => {
-                  const val = parseInt(e.target.value);
-                  if (!isNaN(val)) {
+                  const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                  setQuickCopyStartInput(val);
+                  if (typeof val === 'number' && !isNaN(val)) {
                     const newNums = chapters
                       .map(c => c.chapter_number)
                       .filter(num => num >= val)
