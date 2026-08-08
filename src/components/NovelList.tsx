@@ -1,24 +1,28 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { Book, Loader2, Trash2, Search } from 'lucide-react';
+import { Book, Loader2, Trash2, Edit3, Search } from 'lucide-react';
 import { type Novel } from '../supabase';
 import { useNavigate } from 'react-router-dom';
+import { EditNovelModal } from './EditNovelModal';
 
 interface NovelListProps {
   novels: Novel[];
   isLoading: boolean;
   setIsAddingNovel: (val: boolean) => void;
-  handleDeleteNovel: (id: string, e: React.MouseEvent) => void;
+  handleDeleteNovel: (id: string, e?: React.MouseEvent) => void;
+  handleUpdateNovel?: (updated: Novel) => void;
 }
 
 export const NovelList: React.FC<NovelListProps> = ({ 
   novels, 
   isLoading, 
   setIsAddingNovel,
-  handleDeleteNovel 
+  handleDeleteNovel,
+  handleUpdateNovel 
 }) => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
+  const [editingNovel, setEditingNovel] = useState<Novel | null>(null);
 
   const filteredNovels = novels.filter(novel => 
     novel.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -74,20 +78,50 @@ export const NovelList: React.FC<NovelListProps> = ({
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-4">
                   <span className="text-white text-sm font-medium">عرض الفصول</span>
                 </div>
-                <button 
-                  onClick={(e) => handleDeleteNovel(novel.id, e)}
-                  className="absolute top-2 left-2 p-2 bg-bg-primary/90 text-red-500 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 dark:hover:bg-red-900/20"
-                >
-                  <Trash2 size={16} />
-                </button>
+                <div className="absolute top-2 left-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingNovel(novel);
+                    }}
+                    className="p-2 bg-bg-primary/90 text-text-secondary hover:text-emerald-600 rounded-lg shadow-sm hover:bg-bg-primary transition-all"
+                    title="تعديل الرواية"
+                  >
+                    <Edit3 size={16} />
+                  </button>
+                  <button 
+                    onClick={(e) => handleDeleteNovel(novel.id, e)}
+                    className="p-2 bg-bg-primary/90 text-red-500 rounded-lg shadow-sm hover:bg-red-50 dark:hover:bg-red-900/20 transition-all"
+                    title="حذف الرواية"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
               </div>
               <div className="p-3">
                 <h3 className="font-bold text-text-primary line-clamp-1">{novel.title}</h3>
+                {novel.original_title && (
+                  <p className="text-xs text-text-secondary line-clamp-1 mt-0.5">{novel.original_title}</p>
+                )}
               </div>
             </motion.div>
           ))
         )}
       </motion.div>
+
+      {/* Edit Novel Modal */}
+      <EditNovelModal
+        isOpen={!!editingNovel}
+        novel={editingNovel}
+        onClose={() => setEditingNovel(null)}
+        onSave={(updated) => {
+          if (handleUpdateNovel) handleUpdateNovel(updated);
+        }}
+        onDelete={(id) => {
+          handleDeleteNovel(id);
+        }}
+      />
     </div>
   );
 };
+

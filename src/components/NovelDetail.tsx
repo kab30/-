@@ -43,7 +43,8 @@ import ePub from 'epubjs';
 import { ScraperModal } from './ScraperModal';
 import { CleaningRulesModal } from './CleaningRulesModal';
 import { GeminiTranslateModal } from './GeminiTranslateModal';
-import { Settings2 } from 'lucide-react';
+import { EditNovelModal } from './EditNovelModal';
+import { Settings2, Edit3 } from 'lucide-react';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -98,6 +99,7 @@ export const NovelDetail: React.FC = () => {
   const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
   const [quickCopyStartInput, setQuickCopyStartInput] = useState<number | ''>('');
   const [quickCopyStates, setQuickCopyStates] = useState<Record<number, 'idle' | 'copied' | 'saving'>>({});
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
     if (id) {
@@ -1093,32 +1095,33 @@ export const NovelDetail: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col gap-1 w-full">
-                <div className="flex items-center justify-center sm:justify-start gap-3">
-                  <h2 className="text-2xl sm:text-3xl font-black text-text-primary">{novel.title}</h2>
+                <div className="flex flex-col sm:flex-row items-center sm:items-start justify-between gap-3 w-full">
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-black text-text-primary">{novel.title}</h2>
+                    {novel.original_title && (
+                      <p className="text-text-secondary font-medium text-sm sm:text-base mt-1">{novel.original_title}</p>
+                    )}
+                    {novel.source_url && (
+                      <a 
+                        href={novel.source_url} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-emerald-600 text-xs sm:text-sm hover:underline flex items-center justify-center sm:justify-start gap-1 mt-1"
+                      >
+                        <ImageIcon size={14} />
+                        <span>رابط الرواية الأصلي</span>
+                      </a>
+                    )}
+                  </div>
                   <button 
-                    onClick={() => {
-                      setEditedTitle(novel.title);
-                      setIsEditingTitle(true);
-                    }}
-                    className="p-2 text-text-secondary hover:text-emerald-600 transition-colors"
+                    onClick={() => setIsEditModalOpen(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white hover:bg-emerald-700 rounded-xl font-bold text-xs sm:text-sm transition-all shadow-md shadow-emerald-500/20 shrink-0"
+                    title="تعديل معلومات الرواية (الاسم، الغلاف، الرابط، الحذف)"
                   >
-                    <Edit size={18} className="sm:w-5 sm:h-5" />
+                    <Edit3 size={16} />
+                    <span>تعديل الرواية</span>
                   </button>
                 </div>
-                {novel.original_title && (
-                  <p className="text-text-secondary font-medium text-sm sm:text-base">{novel.original_title}</p>
-                )}
-                {novel.source_url && (
-                  <a 
-                    href={novel.source_url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-emerald-600 text-xs sm:text-sm hover:underline flex items-center justify-center sm:justify-start gap-1"
-                  >
-                    <ImageIcon size={14} />
-                    رابط الرواية الأصلي
-                  </a>
-                )}
               </div>
             )}
           </div>
@@ -2101,6 +2104,21 @@ export const NovelDetail: React.FC = () => {
           </>
         )}
       </AnimatePresence>
+      {/* Edit Novel Modal */}
+      <EditNovelModal
+        isOpen={isEditModalOpen}
+        novel={novel}
+        onClose={() => setIsEditModalOpen(false)}
+        onSave={(updated) => {
+          setNovel(updated);
+          setEditedTitle(updated.title);
+          setEditedTotalChapters(updated.total_chapters ? String(updated.total_chapters) : '');
+          setEditedNotes(updated.notes || '');
+        }}
+        onDelete={() => {
+          navigate('/');
+        }}
+      />
     </motion.div>
   );
 };

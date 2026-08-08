@@ -220,15 +220,19 @@ function AppContent({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleThe
     }
   };
 
-  const handleDeleteNovel = async (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDeleteNovel = async (id: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
     if (!confirm('هل أنت متأكد من حذف هذه الرواية؟')) return;
 
     const { error } = await supabase.from('novels').delete().eq('id', id);
     if (error) alert('خطأ في الحذف');
     else {
-      setNovels(novels.filter(n => n.id !== id));
+      setNovels(prev => prev.filter(n => n.id !== id));
     }
+  };
+
+  const handleUpdateNovel = (updated: Novel) => {
+    setNovels(prev => prev.map(n => n.id === updated.id ? updated : n));
   };
 
   return (
@@ -338,7 +342,8 @@ function AppContent({ theme, toggleTheme }: { theme: 'light' | 'dark', toggleThe
                 novels={novels} 
                 isLoading={isLoading} 
                 setIsAddingNovel={setIsAddingNovel} 
-                handleDeleteNovel={handleDeleteNovel} 
+                handleDeleteNovel={handleDeleteNovel}
+                handleUpdateNovel={handleUpdateNovel} 
               />
             } />
             <Route path="/novel/:id" element={<NovelDetail />} />
