@@ -45,6 +45,7 @@ import { CleaningRulesModal } from './CleaningRulesModal';
 import { GeminiTranslateModal } from './GeminiTranslateModal';
 import { EditNovelModal } from './EditNovelModal';
 import { Settings2, Edit3 } from 'lucide-react';
+import { parseTextIntoChapters, extractChapterNumberFromText } from '../utils/chapterParser';
 
 function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -440,10 +441,10 @@ export const NovelDetail: React.FC = () => {
             if (!doc || !doc.body) continue;
 
             // Try to get title from headers
-            let title = "";
+            let headerTitle = "";
             const header = doc.querySelector('h1, h2, h3, h4, h5, h6');
             if (header) {
-              title = header.textContent?.trim() || "";
+              headerTitle = header.textContent?.trim() || "";
             }
 
             const textContent = doc.body.textContent || "";
@@ -452,32 +453,42 @@ export const NovelDetail: React.FC = () => {
             // Skip very short sections (like nav, title page)
             if (trimmedText.length < 20) continue;
 
-            const chapterRegex = /(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+))/i;
-            const match = trimmedText.match(chapterRegex);
-            
-            let chapterNum: number;
-            if (match) {
-              chapterNum = parseInt(match[1] || match[2] || match[3] || match[4]);
+            // Check if spine item contains multiple chapters
+            const subChapters = parseTextIntoChapters(trimmedText, novel.id, currentMax, existingNumbers);
+            if (subChapters.length > 1) {
+              for (const sub of subChapters) {
+                if (sub.chapter_number > 0) {
+                  currentMax = Math.max(currentMax, sub.chapter_number);
+                }
+                parsedChapters.push(sub);
+              }
             } else {
-              chapterNum = currentMax + 1;
-            }
-            
-            if (!isNaN(chapterNum)) {
-              currentMax = Math.max(currentMax, chapterNum);
+              // Single chapter spine item
+              const candidateText = headerTitle ? (headerTitle + '\n' + trimmedText) : trimmedText;
+              const extractedNum = extractChapterNumberFromText(candidateText);
               
+              let chapterNum: number;
+              if (!isNaN(extractedNum) && extractedNum > 0) {
+                chapterNum = extractedNum;
+                currentMax = Math.max(currentMax, chapterNum);
+              } else {
+                chapterNum = ++currentMax;
+              }
+
+              let title = headerTitle;
               if (!title) {
                 const lines = trimmedText.split('\n');
                 title = lines[0].trim().substring(0, 100);
               }
 
               const lines = trimmedText.split('\n');
-              const content = lines.length > 1 ? lines.slice(1).join('\n').trim() : trimmedText;
+              const bodyContent = lines.length > 1 ? lines.slice(1).join('\n').trim() : trimmedText;
 
               parsedChapters.push({
                 novel_id: novel.id,
                 chapter_number: chapterNum,
                 title: title || `الفصل ${chapterNum}`,
-                content_original: content || trimmedText,
+                content_original: bodyContent || trimmedText,
                 isDuplicate: existingNumbers.has(chapterNum)
               });
             }
@@ -506,60 +517,7 @@ export const NovelDetail: React.FC = () => {
     const reader = new FileReader();
     reader.onload = async (event) => {
       const text = event.target?.result as string;
-      
-      // Improved regex: matches at start of line, removed aggressive (\d+): which caught timestamps
-      const chapterRegex = /^\s*(?:第\s*(\d+)\s*(?:章|节|回)|Chapter\s*(\d+)|الفصل\s*(\d+))/gim;
-      const markers = Array.from(text.matchAll(chapterRegex));
-      
-      const parsedChapters: any[] = [];
-      
-      if (markers.length === 0) {
-        const nextNum = maxExistingNum + 1;
-        parsedChapters.push({
-          novel_id: novel.id,
-          chapter_number: nextNum,
-          title: `الفصل ${nextNum}`,
-          content_original: text.trim(),
-          isDuplicate: existingNumbers.has(nextNum)
-        });
-      } else {
-        // Handle content before the first marker (e.g., intro, title page)
-        const firstMarkerIndex = markers[0].index!;
-        if (firstMarkerIndex > 10) {
-          const introText = text.substring(0, firstMarkerIndex).trim();
-          if (introText.length > 50) { // Only add if it's substantial
-            parsedChapters.push({
-              novel_id: novel.id,
-              chapter_number: 0,
-              title: "مقدمة / تمهيد",
-              content_original: introText,
-              isDuplicate: false
-            });
-          }
-        }
-
-        for (let i = 0; i < markers.length; i++) {
-          const match = markers[i];
-          const extractedNum = parseInt(match[1] || match[2] || match[3] || "");
-          const chapterNum = isNaN(extractedNum) ? (maxExistingNum + i + 1) : extractedNum;
-          
-          const start = match.index!;
-          const end = markers[i + 1] ? markers[i + 1].index : text.length;
-          const fullContent = text.substring(start, end).trim();
-          
-          const lines = fullContent.split('\n');
-          const title = lines[0].trim();
-          const content = lines.slice(1).join('\n').trim();
-
-          parsedChapters.push({
-            novel_id: novel.id,
-            chapter_number: chapterNum,
-            title: title,
-            content_original: content || fullContent,
-            isDuplicate: existingNumbers.has(chapterNum)
-          });
-        }
-      }
+      const parsedChapters = parseTextIntoChapters(text, novel.id, maxExistingNum, existingNumbers);
 
       setPendingChapters(parsedChapters);
       setSelectedPendingIndices(new Set(

@@ -14,6 +14,7 @@ import {
   Copy
 } from 'lucide-react';
 import { supabase, type Novel } from '../supabase';
+import { parseChineseNumber } from '../utils/chapterParser';
 
 interface GeminiImportModalProps {
   isOpen: boolean;
@@ -102,7 +103,7 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
     setError('');
     
     // Split by common chapter indicators
-    const parts = manualText.split(/(?=Chapter|الفصل|第\s*\d+\s*章|فصل\s*\d+)/i);
+    const parts = manualText.split(/(?=Chapter|الفصل|第\s*[0-9\u4e00-\u9fa5]+\s*(?:章|节|回|折|幕|集|卷|篇|话|話)|فصل\s*\d+)/i);
     const chaptersMap: Map<number, GeminiChapter> = new Map();
     let counter = 1;
 
@@ -123,8 +124,8 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
       if (lines.length === 0) return;
       
       const firstLine = lines[0];
-      const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i) ||
-                           firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*章)?/i);
+      const chapterMatch = trimmed.match(/^(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*(?:章|节|回|折|幕|集|卷|篇|话|話))?/i) ||
+                           firstLine.match(/(?:Chapter|الفصل|فصل|第)\s*([0-9\u4e00-\u9fa5]+)(?:\s*(?:章|节|回|折|幕|集|卷|篇|话|話))?/i);
       
       // Check if it really looks like a chapter header
       const isChapterHeader = chapterMatch || 
@@ -132,8 +133,9 @@ export const GeminiImportModal: React.FC<GeminiImportModalProps> = ({ isOpen, on
 
       if (!isChapterHeader) return;
 
-      let numStr = chapterMatch ? chapterMatch[1] : String(counter++);
-      const num = /^\d+$/.test(numStr) ? parseInt(numStr) : counter++;
+      let numStr = chapterMatch ? chapterMatch[1] : String(counter);
+      let parsedNum = parseChineseNumber(numStr);
+      const num = !isNaN(parsedNum) ? parsedNum : counter++;
       const title = firstLine.length < 150 ? firstLine : `فصل ${num}`;
 
       if (!chaptersMap.has(num)) {

@@ -272,15 +272,57 @@ async function startServer() {
                                        /^(?:Chapter|الفصل|فصل|第)/i.test(trimmed);
 
               if (hasChapterKeyword || chapterMatch) {
-                let num: number;
+                let num: number = NaN;
                 if (chapterMatch) {
-                  const numStr = chapterMatch[1];
+                  const numStr = chapterMatch[1].trim();
                   // Convert Arabic/Persian numerals to Western
                   const western = numStr.replace(/[٠-٩]/g, d => "٠١٢٣٤٥٦٧٨٩".indexOf(d).toString())
                                        .replace(/[۰-۹]/g, d => "۰۱۲۳۴۵۶۷۸۹".indexOf(d).toString());
-                  num = parseInt(western);
-                  if (isNaN(num)) num = chapterCounter++;
-                } else {
+                  if (/^\d+$/.test(western)) {
+                    num = parseInt(western, 10);
+                  } else {
+                    // Chinese numeral parsing
+                    const digitMap: Record<string, number> = {
+                      '0': 0, '1': 1, '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9,
+                      '零': 0, '〇': 0, '一': 1, '壹': 1, '二': 2, '贰': 2, '两': 2, '兩': 2,
+                      '三': 3, '叁': 3, '四': 4, '肆': 4, '五': 5, '伍': 5, '六': 6, '陆': 6,
+                      '七': 7, '柒': 7, '八': 8, '捌': 8, '九': 9, '玖': 9
+                    };
+                    const unitMap: Record<string, number> = {
+                      '十': 10, '拾': 10, '百': 100, '佰': 100, '千': 1000, '仟': 1000,
+                      '万': 10000, '萬': 10000, '亿': 100000000, '億': 100000000
+                    };
+                    if (/[十拾百佰千仟万萬亿億]/.test(numStr)) {
+                      let total = 0, section = 0, current = 0, hasD = false;
+                      for (let c of numStr) {
+                        if (digitMap[c] !== undefined || /\d/.test(c)) {
+                          current = digitMap[c] !== undefined ? digitMap[c] : parseInt(c, 10);
+                          hasD = true;
+                        } else if (unitMap[c] !== undefined) {
+                          const u = unitMap[c];
+                          if (u === 10000 || u === 100000000) {
+                            total += (section + current) * u;
+                            section = 0; current = 0; hasD = false;
+                          } else {
+                            if (!hasD && u === 10) current = 1;
+                            section += current * u;
+                            current = 0; hasD = false;
+                          }
+                        }
+                      }
+                      total += section + current;
+                      if (total > 0) num = total;
+                    } else {
+                      let dStr = '';
+                      for (let c of numStr) {
+                        if (digitMap[c] !== undefined) dStr += digitMap[c];
+                        else if (/\d/.test(c)) dStr += c;
+                      }
+                      if (dStr) num = parseInt(dStr, 10);
+                    }
+                  }
+                }
+                if (isNaN(num) || num <= 0) {
                   num = chapterCounter++;
                 }
                 
