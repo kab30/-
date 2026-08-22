@@ -11,24 +11,24 @@ interface ChangelogModalProps {
 export const ChangelogModal: React.FC<ChangelogModalProps> = ({ isOpen, onClose, version }) => {
   const updates = [
     {
-      title: 'الترجمة الآلية بواسطة Gemini (جديد)',
+      title: 'شريط تقدم الترجمة على الغلاف (جديد)',
+      description: 'ظهور شريط أحمر ومؤشر دقيق على غلاف الرواية في الصفحة الرئيسية يوضح الفصل الذي وصلت إليه ونسبة الإنجاز.',
+      icon: <Sparkles className="text-red-500" size={20} />
+    },
+    {
+      title: 'التعرف على الفصول الصينية (第一章)',
+      description: 'دعم كامل للأرقام الصينية عند رفع ملفات TXT و EPUB وتحديد الفصول تلقائياً بدقة.',
+      icon: <CheckCircle2 className="text-emerald-500" size={20} />
+    },
+    {
+      title: 'الترجمة الآلية بواسطة Gemini',
       description: 'إمكانية ترجمة الفصول المختارة آلياً وبسرعة عالية باستخدام ذكاء Gemini الاصطناعي.',
       icon: <Sparkles className="text-emerald-500" size={20} />
     },
     {
-      title: 'المتصفح المدمج',
+      title: 'المتصفح المدمج وسحب الروابط',
       description: 'فتح الموقع الأصلي في نافذة جانبية داخل الموقع لتسهيل النسخ واللصق وتجاوز الحماية.',
       icon: <Globe className="text-blue-500" size={20} />
-    },
-    {
-      title: 'تحديث النص الأصلي',
-      description: 'إضافة زر لصق لتحديث النص الأصلي للفصل مباشرة من الحافظة في حال فشل السحب.',
-      icon: <Clipboard className="text-emerald-500" size={20} />
-    },
-    {
-      title: 'تحسين سحب ملفات Text',
-      description: 'تطوير منطق استخراج الفصول من ملفات التكست لتجنب التداخل مع الطوابع الزمنية ودعم المقدمات.',
-      icon: <Zap className="text-amber-500" size={20} />
     }
   ];
 
