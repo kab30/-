@@ -105,7 +105,8 @@ export interface ParsedChapterItem {
 }
 
 // Regex matching chapter headers in Chinese, English, Arabic, and numeric forms
-export const CHAPTER_START_REGEX = /^\s*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|卷|篇|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
+// Handles leading symbols/punctuation like: ! ! 第九章, 【第9章】, === 第九章 ===, Chapter 9, الفصل 9
+export const CHAPTER_START_REGEX = /^[^\w\u4e00-\u9fa5\r\n]*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
 
 export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpExecArray): number {
   // Group 1: Chinese or mixed numeral (e.g. 第一, 第1, 第百二十三)
@@ -128,7 +129,7 @@ export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpEx
 
 export function extractChapterNumberFromText(text: string): number {
   if (!text) return NaN;
-  const regex = /(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|卷|篇|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/i;
+  const regex = /(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/i;
   const match = text.match(regex);
   if (match) {
     return extractChapterNumberFromMatch(match);
@@ -142,7 +143,8 @@ export function parseTextIntoChapters(
   maxExistingNum: number,
   existingNumbers: Set<number>
 ): ParsedChapterItem[] {
-  const chapterRegex = /^\s*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|卷|篇|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
+  // Enhanced regex that matches line starts with optional symbols
+  const chapterRegex = /^[^\w\u4e00-\u9fa5\r\n]*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
   const markers = Array.from(text.matchAll(chapterRegex));
 
   const parsedChapters: ParsedChapterItem[] = [];
@@ -175,6 +177,7 @@ export function parseTextIntoChapters(
   }
 
   let lastAssignedNum = maxExistingNum;
+  const tempExtracted: { chapterNum: number; title: string; content: string }[] = [];
 
   for (let i = 0; i < markers.length; i++) {
     const match = markers[i];
@@ -194,16 +197,58 @@ export function parseTextIntoChapters(
 
     const lines = fullContent.split('\n');
     const title = lines[0].trim();
-    const content = lines.slice(1).join('\n').trim();
+    const bodyLines = lines.slice(1).map(l => l.trim()).filter(Boolean);
+    const content = bodyLines.join('\n');
 
+    tempExtracted.push({
+      chapterNum,
+      title: title || `الفصل ${chapterNum}`,
+      content: content || fullContent
+    });
+  }
+
+  // Smart deduplication and merging:
+  // If consecutive or duplicate sections occur (e.g. an author note/stub and the real chapter),
+  // ensure the full content is preserved and NOT overwritten by empty stubs.
+  const consolidatedMap = new Map<number, { title: string; content: string }>();
+
+  for (const item of tempExtracted) {
+    const existing = consolidatedMap.get(item.chapterNum);
+    if (!existing) {
+      consolidatedMap.set(item.chapterNum, { title: item.title, content: item.content });
+    } else {
+      const existingLen = existing.content.length;
+      const newLen = item.content.length;
+
+      // If one is substantial (>250 chars) and one is stub (<150 chars)
+      if (existingLen >= 250 && newLen < 150) {
+        // Keep the substantial one
+      } else if (newLen >= 250 && existingLen < 150) {
+        // Replace with the substantial one
+        consolidatedMap.set(item.chapterNum, { title: item.title, content: item.content });
+      } else {
+        // Both are substantial or both are short: merge them so no text is lost
+        consolidatedMap.set(item.chapterNum, {
+          title: existingLen >= newLen ? existing.title : item.title,
+          content: existing.content + '\n\n' + item.content
+        });
+      }
+    }
+  }
+
+  // Build final array in sorted order
+  const sortedNumbers = Array.from(consolidatedMap.keys()).sort((a, b) => a - b);
+  for (const num of sortedNumbers) {
+    const data = consolidatedMap.get(num)!;
     parsedChapters.push({
       novel_id: novelId,
-      chapter_number: chapterNum,
-      title: title || `الفصل ${chapterNum}`,
-      content_original: content || fullContent,
-      isDuplicate: existingNumbers.has(chapterNum)
+      chapter_number: num,
+      title: data.title,
+      content_original: data.content,
+      isDuplicate: existingNumbers.has(num)
     });
   }
 
   return parsedChapters;
 }
+

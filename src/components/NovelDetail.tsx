@@ -322,6 +322,28 @@ export const NovelDetail: React.FC = () => {
     setSelectedChapterIds(newSelection);
   };
 
+  const [isEditingOriginal, setIsEditingOriginal] = useState(false);
+  const [editedOriginalContent, setEditedOriginalContent] = useState('');
+
+  const handleSaveEditedOriginal = async () => {
+    if (!selectedChapter) return;
+    try {
+      const { error } = await supabase
+        .from('chapters')
+        .update({ content_original: editedOriginalContent })
+        .eq('id', selectedChapter.id);
+
+      if (error) throw error;
+
+      setChapters(prev => prev.map(c => c.id === selectedChapter.id ? { ...c, content_original: editedOriginalContent } : c));
+      setSelectedChapter(prev => prev ? { ...prev, content_original: editedOriginalContent } : null);
+      setIsEditingOriginal(false);
+    } catch (err: any) {
+      console.error('Error updating original content:', err);
+      alert('خطأ في حفظ النص الأصلي');
+    }
+  };
+
   const handleConfirmUpload = async () => {
     if (!novel || selectedPendingIndices.size === 0) return;
 
@@ -330,10 +352,37 @@ export const NovelDetail: React.FC = () => {
       .filter((_, idx) => selectedPendingIndices.has(idx))
       .map(({ isDuplicate, ...rest }) => rest);
 
-    const uniqueChaptersMap = new Map();
-    chaptersToUpload.forEach(chap => {
-      uniqueChaptersMap.set(chap.chapter_number, chap);
-    });
+    // Smart deduplication: NEVER let an empty or short stub (<200 chars) overwrite a substantial chapter (>300 chars)
+    const uniqueChaptersMap = new Map<number, any>();
+    for (const chap of chaptersToUpload) {
+      const num = chap.chapter_number;
+      const existing = uniqueChaptersMap.get(num);
+
+      if (!existing) {
+        uniqueChaptersMap.set(num, chap);
+      } else {
+        const existingLen = (existing.content_original || '').trim().length;
+        const newLen = (chap.content_original || '').trim().length;
+
+        if (existingLen >= 200 && newLen < 150) {
+          // Keep the existing substantial chapter!
+        } else if (newLen >= 200 && existingLen < 150) {
+          // Overwrite with the substantial chapter!
+          uniqueChaptersMap.set(num, chap);
+        } else if (newLen > existingLen) {
+          if (existingLen > 200 && newLen > 200) {
+            // Merge both substantial parts
+            uniqueChaptersMap.set(num, {
+              ...chap,
+              title: chap.title.length > existing.title.length ? chap.title : existing.title,
+              content_original: existing.content_original + '\n\n' + chap.content_original
+            });
+          } else {
+            uniqueChaptersMap.set(num, chap);
+          }
+        }
+      }
+    }
     const finalChaptersToUpload = Array.from(uniqueChaptersMap.values());
 
     const batchSize = 50;
@@ -1564,11 +1613,30 @@ export const NovelDetail: React.FC = () => {
                   {/* Original Text */}
                   <div className="p-6 space-y-4">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
-                        <Languages size={14} />
-                        النص الأصلي
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-bold uppercase tracking-wider text-text-secondary flex items-center gap-1">
+                          <Languages size={14} />
+                          النص الأصلي
+                        </span>
+                        {(!selectedChapter.content_original || selectedChapter.content_original.trim().length < 150) && (
+                          <span className="text-[10px] bg-amber-500/10 text-amber-600 border border-amber-500/20 px-2 py-0.5 rounded-full font-bold">
+                            محتوى قصير / يحتاج تحديث
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1">
+                        <button 
+                          onClick={() => {
+                            setEditedOriginalContent(selectedChapter.content_original || '');
+                            setIsEditingOriginal(!isEditingOriginal);
+                          }}
+                          className={`p-1.5 rounded-lg transition-colors ${
+                            isEditingOriginal ? 'bg-emerald-500 text-white' : 'text-text-secondary hover:text-emerald-600'
+                          }`}
+                          title="تعديل النص الأصلي يدوياً"
+                        >
+                          <Edit3 size={14} />
+                        </button>
                         <button 
                           onClick={handlePasteToOriginal}
                           className="p-1.5 text-text-secondary hover:text-emerald-600 transition-colors"
@@ -1585,9 +1653,50 @@ export const NovelDetail: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary">
-                      {selectedChapter.content_original}
-                    </div>
+
+                    {isEditingOriginal ? (
+                      <div className="space-y-2">
+                        <textarea
+                          className="w-full h-[540px] p-4 bg-bg-primary border border-emerald-500 rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-text-primary font-mono"
+                          placeholder="الصق أو عدل النص الأصلي للفصل هنا..."
+                          value={editedOriginalContent}
+                          onChange={(e) => setEditedOriginalContent(e.target.value)}
+                        />
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => setIsEditingOriginal(false)}
+                            className="px-3 py-1.5 bg-bg-secondary text-text-secondary hover:text-text-primary text-xs font-bold rounded-lg transition-colors"
+                          >
+                            إلغاء
+                          </button>
+                          <button
+                            onClick={handleSaveEditedOriginal}
+                            className="px-4 py-1.5 bg-emerald-600 text-white text-xs font-bold rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-1"
+                          >
+                            <Save size={13} />
+                            حفظ النص الأصلي
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div>
+                        {(!selectedChapter.content_original || selectedChapter.content_original.trim().length < 150) && (
+                          <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 rounded-xl flex items-center justify-between text-xs text-amber-700 dark:text-amber-300">
+                            <span>يبدو أن هذا الفصل يحتوي على نص قصير جداً أو ملاحظة فقط.</span>
+                            <button
+                              onClick={handlePasteToOriginal}
+                              className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-lg transition-colors flex items-center gap-1 shadow-sm shrink-0"
+                            >
+                              <Clipboard size={12} />
+                              لصق النص الكامل
+                            </button>
+                          </div>
+                        )}
+                        <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary">
+                          {selectedChapter.content_original || <span className="italic text-text-secondary">لا يوجد نص أصلي لهذا الفصل. يمكنك لصق النص باستخدام زر اللصق أعلاه.</span>}
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Arabic Translation */}
