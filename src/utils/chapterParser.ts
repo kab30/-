@@ -105,8 +105,8 @@ export interface ParsedChapterItem {
 }
 
 // Regex matching chapter headers in Chinese, English, Arabic, and numeric forms
-// Handles leading symbols/punctuation like: ! ! 第九章, 【第9章】, === 第九章 ===, Chapter 9, الفصل 9
-export const CHAPTER_START_REGEX = /^[^\w\u4e00-\u9fa5\r\n]*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
+// Handles leading symbols/punctuation like: ! ! 第九章, 【第9章】, === 第九章 ===, 10: Chapter 10, Volume 1 Chapter 1
+export const CHAPTER_START_REGEX = /^[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*(?:(?:Volume|Vol\.|Vol|Book|Part|الجزء|المجلد|第\s*\d+\s*卷)\s*\d*[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*)?(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
 
 export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpExecArray): number {
   // Group 1: Chinese or mixed numeral (e.g. 第一, 第1, 第百二十三)
@@ -127,6 +127,16 @@ export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpEx
   return NaN;
 }
 
+export function cleanChapterTitle(rawTitle: string): string {
+  if (!rawTitle) return '';
+  let title = rawTitle.trim();
+  // Remove leading artifacts like ?, !, ¿, ¡, ■, ●, ★, ◆, ▲, ▼, #, =, *, ~, _, -, etc.
+  title = title.replace(/^[?!¿¡■●★◆▲▼#=*~_\-\s]+/, '');
+  // If title was prefixed with line number like "10: Chapter 10", clean it up
+  title = title.replace(/^\d+:\s*(Chapter|Chap|Ch|第|الفصل|فصل)/i, '$1');
+  return title.trim();
+}
+
 export function extractChapterNumberFromText(text: string): number {
   if (!text) return NaN;
   const regex = /(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/i;
@@ -143,13 +153,13 @@ export function parseTextIntoChapters(
   maxExistingNum: number,
   existingNumbers: Set<number>
 ): ParsedChapterItem[] {
-  // Enhanced regex that matches line starts with optional symbols
-  const chapterRegex = /^[^\w\u4e00-\u9fa5\r\n]*(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
-  const markers = Array.from(text.matchAll(chapterRegex));
+  // Enhanced regex matching line starts with optional symbols, numbers, and volume indicators
+  const chapterRegex = /^[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*(?:(?:Volume|Vol\.|Vol|Book|Part|الجزء|المجلد|第\s*\d+\s*卷)\s*\d*[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*)?(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
+  const rawMarkers = Array.from(text.matchAll(chapterRegex));
 
   const parsedChapters: ParsedChapterItem[] = [];
 
-  if (markers.length === 0) {
+  if (rawMarkers.length === 0) {
     const nextNum = maxExistingNum + 1;
     parsedChapters.push({
       novel_id: novelId,
@@ -161,9 +171,35 @@ export function parseTextIntoChapters(
     return parsedChapters;
   }
 
+  // 1. Detect and bypass Table of Contents (TOC) at the beginning of the file if present.
+  // A TOC has many consecutive markers (>10) where the text between them is very short (<120 chars),
+  // followed later by the actual story chapters with full content (>300 chars).
+  let startIndex = 0;
+  if (rawMarkers.length > 20) {
+    let initialShortCount = 0;
+    const testLimit = Math.min(rawMarkers.length - 1, 25);
+    for (let i = 0; i < testLimit; i++) {
+      const segLen = rawMarkers[i + 1].index! - rawMarkers[i].index!;
+      if (segLen < 150) initialShortCount++;
+    }
+    // If the beginning consists of mostly short title stubs, scan forward to where the real chapters begin
+    if (initialShortCount >= 18) {
+      for (let i = 0; i < rawMarkers.length; i++) {
+        const segEnd = rawMarkers[i + 1] ? rawMarkers[i + 1].index! : text.length;
+        const segLen = segEnd - rawMarkers[i].index!;
+        if (segLen >= 300) {
+          startIndex = i;
+          break;
+        }
+      }
+    }
+  }
+
+  const markers = rawMarkers.slice(startIndex);
+
   // Handle preamble / introductory text before the first chapter
   const firstMarkerIndex = markers[0].index!;
-  if (firstMarkerIndex > 10) {
+  if (firstMarkerIndex > 10 && startIndex === 0) {
     const introText = text.substring(0, firstMarkerIndex).trim();
     if (introText.length > 50) {
       parsedChapters.push({
@@ -176,76 +212,79 @@ export function parseTextIntoChapters(
     }
   }
 
-  let lastAssignedNum = maxExistingNum;
-  const tempExtracted: { chapterNum: number; title: string; content: string }[] = [];
+  // 2. Extract sections in strict document file sequence
+  interface RawSection {
+    detectedNum: number;
+    title: string;
+    content: string;
+  }
 
+  const rawSections: RawSection[] = [];
   for (let i = 0; i < markers.length; i++) {
     const match = markers[i];
-    const extractedNum = extractChapterNumberFromMatch(match);
-    
-    let chapterNum: number;
-    if (!isNaN(extractedNum) && extractedNum > 0) {
-      chapterNum = extractedNum;
-      lastAssignedNum = Math.max(lastAssignedNum, chapterNum);
-    } else {
-      chapterNum = ++lastAssignedNum;
-    }
-
+    const detectedNum = extractChapterNumberFromMatch(match);
     const start = match.index!;
     const end = markers[i + 1] ? markers[i + 1].index : text.length;
     const fullContent = text.substring(start, end).trim();
 
     const lines = fullContent.split('\n');
-    const title = lines[0].trim();
+    const rawTitle = lines[0].trim();
+    const cleanedTitle = cleanChapterTitle(rawTitle);
     const bodyLines = lines.slice(1).map(l => l.trim()).filter(Boolean);
     const content = bodyLines.join('\n');
 
-    tempExtracted.push({
-      chapterNum,
-      title: title || `الفصل ${chapterNum}`,
+    rawSections.push({
+      detectedNum,
+      title: cleanedTitle || (detectedNum ? `الفصل ${detectedNum}` : `فصل`),
       content: content || fullContent
     });
   }
 
-  // Smart deduplication and merging:
-  // If consecutive or duplicate sections occur (e.g. an author note/stub and the real chapter),
-  // ensure the full content is preserved and NOT overwritten by empty stubs.
-  const consolidatedMap = new Map<number, { title: string; content: string }>();
-
-  for (const item of tempExtracted) {
-    const existing = consolidatedMap.get(item.chapterNum);
-    if (!existing) {
-      consolidatedMap.set(item.chapterNum, { title: item.title, content: item.content });
-    } else {
-      const existingLen = existing.content.length;
-      const newLen = item.content.length;
-
-      // If one is substantial (>250 chars) and one is stub (<150 chars)
-      if (existingLen >= 250 && newLen < 150) {
-        // Keep the substantial one
-      } else if (newLen >= 250 && existingLen < 150) {
-        // Replace with the substantial one
-        consolidatedMap.set(item.chapterNum, { title: item.title, content: item.content });
-      } else {
-        // Both are substantial or both are short: merge them so no text is lost
-        consolidatedMap.set(item.chapterNum, {
-          title: existingLen >= newLen ? existing.title : item.title,
-          content: existing.content + '\n\n' + item.content
-        });
-      }
+  // 3. Filter out empty stubs if a substantial chapter with the same number exists
+  const numToSections = new Map<number, RawSection[]>();
+  for (const sec of rawSections) {
+    if (!isNaN(sec.detectedNum) && sec.detectedNum > 0) {
+      const list = numToSections.get(sec.detectedNum) || [];
+      list.push(sec);
+      numToSections.set(sec.detectedNum, list);
     }
   }
 
-  // Build final array in sorted order
-  const sortedNumbers = Array.from(consolidatedMap.keys()).sort((a, b) => a - b);
-  for (const num of sortedNumbers) {
-    const data = consolidatedMap.get(num)!;
+  const filteredSections: RawSection[] = [];
+  for (const sec of rawSections) {
+    if (!isNaN(sec.detectedNum) && sec.detectedNum > 0) {
+      const peers = numToSections.get(sec.detectedNum);
+      if (peers && peers.length > 1) {
+        const hasSubstantial = peers.some(p => p.content.trim().length >= 250);
+        // If there's a substantial chapter and this one is just a tiny stub (<150 chars), skip the stub
+        if (hasSubstantial && sec.content.trim().length < 150) {
+          continue;
+        }
+      }
+    }
+    filteredSections.push(sec);
+  }
+
+  // 4. Assign sequential, non-conflicting chapter numbers while strictly maintaining file order
+  const usedNumbers = new Set<number>();
+  let currentCounter = maxExistingNum;
+
+  for (const sec of filteredSections) {
+    let finalNum: number;
+    if (!isNaN(sec.detectedNum) && sec.detectedNum > 0 && !usedNumbers.has(sec.detectedNum)) {
+      finalNum = sec.detectedNum;
+      currentCounter = Math.max(currentCounter, finalNum);
+    } else {
+      finalNum = ++currentCounter;
+    }
+    usedNumbers.add(finalNum);
+
     parsedChapters.push({
       novel_id: novelId,
-      chapter_number: num,
-      title: data.title,
-      content_original: data.content,
-      isDuplicate: existingNumbers.has(num)
+      chapter_number: finalNum,
+      title: sec.title,
+      content_original: sec.content,
+      isDuplicate: existingNumbers.has(finalNum)
     });
   }
 

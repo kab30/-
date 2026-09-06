@@ -352,8 +352,13 @@ export const NovelDetail: React.FC = () => {
       .filter((_, idx) => selectedPendingIndices.has(idx))
       .map(({ isDuplicate, ...rest }) => rest);
 
-    // Smart deduplication: NEVER let an empty or short stub (<200 chars) overwrite a substantial chapter (>300 chars)
+    // Ensure every chapter to upload has a distinct chapter_number and stubs do not overwrite substantial content
     const uniqueChaptersMap = new Map<number, any>();
+    let maxAssignedNum = 0;
+    for (const chap of chaptersToUpload) {
+      if (chap.chapter_number > maxAssignedNum) maxAssignedNum = chap.chapter_number;
+    }
+
     for (const chap of chaptersToUpload) {
       const num = chap.chapter_number;
       const existing = uniqueChaptersMap.get(num);
@@ -365,25 +370,18 @@ export const NovelDetail: React.FC = () => {
         const newLen = (chap.content_original || '').trim().length;
 
         if (existingLen >= 200 && newLen < 150) {
-          // Keep the existing substantial chapter!
+          // Keep existing substantial chapter, ignore stub
         } else if (newLen >= 200 && existingLen < 150) {
-          // Overwrite with the substantial chapter!
+          // Replace stub with substantial chapter
           uniqueChaptersMap.set(num, chap);
-        } else if (newLen > existingLen) {
-          if (existingLen > 200 && newLen > 200) {
-            // Merge both substantial parts
-            uniqueChaptersMap.set(num, {
-              ...chap,
-              title: chap.title.length > existing.title.length ? chap.title : existing.title,
-              content_original: existing.content_original + '\n\n' + chap.content_original
-            });
-          } else {
-            uniqueChaptersMap.set(num, chap);
-          }
+        } else {
+          // Both are substantial distinct chapters: assign next available number so both are safely preserved
+          maxAssignedNum++;
+          uniqueChaptersMap.set(maxAssignedNum, { ...chap, chapter_number: maxAssignedNum });
         }
       }
     }
-    const finalChaptersToUpload = Array.from(uniqueChaptersMap.values());
+    const finalChaptersToUpload = Array.from(uniqueChaptersMap.values()).sort((a, b) => a.chapter_number - b.chapter_number);
 
     const batchSize = 50;
     let hasError = false;
@@ -1657,7 +1655,8 @@ export const NovelDetail: React.FC = () => {
                     {isEditingOriginal ? (
                       <div className="space-y-2">
                         <textarea
-                          className="w-full h-[540px] p-4 bg-bg-primary border border-emerald-500 rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-text-primary font-mono"
+                          className="w-full h-[540px] p-4 bg-bg-primary border border-emerald-500 rounded-xl text-lg leading-relaxed focus:ring-2 focus:ring-emerald-500 outline-none resize-none text-text-primary font-mono text-left"
+                          dir="ltr"
                           placeholder="الصق أو عدل النص الأصلي للفصل هنا..."
                           value={editedOriginalContent}
                           onChange={(e) => setEditedOriginalContent(e.target.value)}
@@ -1692,7 +1691,7 @@ export const NovelDetail: React.FC = () => {
                             </button>
                           </div>
                         )}
-                        <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary">
+                        <div className="prose prose-stone dark:prose-invert max-w-none h-[600px] overflow-y-auto p-4 bg-bg-secondary rounded-xl text-lg leading-relaxed whitespace-pre-wrap font-mono text-text-primary text-left" dir="ltr">
                           {selectedChapter.content_original || <span className="italic text-text-secondary">لا يوجد نص أصلي لهذا الفصل. يمكنك لصق النص باستخدام زر اللصق أعلاه.</span>}
                         </div>
                       </div>
@@ -1965,7 +1964,7 @@ export const NovelDetail: React.FC = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <span className="font-mono text-xs font-bold text-text-secondary opacity-60">#{chapter.chapter_number}</span>
-                        <span className="font-bold text-text-primary">{chapter.title}</span>
+                        <span className="font-bold text-text-primary text-left" dir="ltr">{chapter.title}</span>
                         {!chapter.content_original?.trim() && (
                           <span className="text-[10px] font-bold text-red-500 bg-red-500/10 px-1.5 py-0.5 rounded">فارغ</span>
                         )}
@@ -2022,7 +2021,7 @@ export const NovelDetail: React.FC = () => {
             >
               <div className="p-6 border-b border-border-primary flex items-center justify-between bg-bg-primary sticky top-0 z-10">
                 <div>
-                  <h3 className="text-xl font-bold text-text-primary">معاينة: {previewPendingChapter.title}</h3>
+                  <h3 className="text-xl font-bold text-text-primary text-left" dir="ltr">معاينة: {previewPendingChapter.title}</h3>
                   <p className="text-sm text-text-secondary">الفصل رقم {previewPendingChapter.chapter_number}</p>
                 </div>
                 <button onClick={() => setPreviewPendingChapter(null)} className="text-text-secondary hover:text-text-primary">
@@ -2030,7 +2029,7 @@ export const NovelDetail: React.FC = () => {
                 </button>
               </div>
               <div className="flex-1 overflow-y-auto p-6 prose prose-stone dark:prose-invert max-w-none">
-                <div className="whitespace-pre-wrap font-mono text-text-primary leading-relaxed">
+                <div className="whitespace-pre-wrap font-mono text-text-primary leading-relaxed text-left" dir="ltr">
                   {previewPendingChapter.content_original || <span className="italic opacity-60">لا يوجد محتوى لهذا الفصل</span>}
                 </div>
               </div>
