@@ -99,7 +99,20 @@ export const NovelDetail: React.FC = () => {
   const [isQuickCopyMode, setIsQuickCopyMode] = useState(false);
   const [quickCopyNumbers, setQuickCopyNumbers] = useState<number[]>([]);
   const [quickCopyStartInput, setQuickCopyStartInput] = useState<number | ''>('');
-  const [quickCopyStates, setQuickCopyStates] = useState<Record<number, 'idle' | 'copied' | 'saving'>>({});
+  const [quickCopyStates, setQuickCopyStates] = useState<Record<number, 'idle' | 'copied' | 'saving' | 'copied_only'>>({});
+  const [quickCopyBoxCount, setQuickCopyBoxCount] = useState<number>(() => {
+    const saved = localStorage.getItem('quick_copy_box_count');
+    const parsed = saved ? parseInt(saved, 10) : 4;
+    return [1, 2, 3, 4].includes(parsed) ? parsed : 4;
+  });
+  const [quickCopyModeType, setQuickCopyModeType] = useState<'copy_paste' | 'copy_only'>(() => {
+    const saved = localStorage.getItem('quick_copy_mode_type');
+    return (saved === 'copy_only' || saved === 'copy_paste') ? saved : 'copy_paste';
+  });
+  const [quickCopyAutoAdvance, setQuickCopyAutoAdvance] = useState<boolean>(() => {
+    const saved = localStorage.getItem('quick_copy_auto_advance');
+    return saved !== null ? saved === 'true' : true;
+  });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   useEffect(() => {
@@ -834,17 +847,76 @@ export const NovelDetail: React.FC = () => {
     const lastTranslatedChapter = [...chapters]
       .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
       .sort((a, b) => b.chapter_number - a.chapter_number)[0];
-    const lastNum = lastTranslatedChapter ? lastTranslatedChapter.chapter_number : 1;
     
+    let lastNum = 1;
+    if (selectedChapter) {
+      lastNum = selectedChapter.chapter_number;
+    } else if (lastTranslatedChapter) {
+      lastNum = lastTranslatedChapter.chapter_number;
+    }
+    
+    const count = quickCopyBoxCount || 4;
     const initialNums = chapters
       .map(c => c.chapter_number)
       .filter(num => num >= lastNum)
       .sort((a, b) => a - b)
-      .slice(0, 4);
+      .slice(0, count);
       
     setQuickCopyNumbers(initialNums);
     setQuickCopyStartInput(lastNum);
+    setQuickCopyStates({});
     setIsQuickCopyMode(true);
+  };
+
+  const changeQuickCopyBoxCount = (count: number) => {
+    setQuickCopyBoxCount(count);
+    localStorage.setItem('quick_copy_box_count', count.toString());
+    const startVal = typeof quickCopyStartInput === 'number' 
+      ? quickCopyStartInput 
+      : (quickCopyNumbers[0] ?? 1);
+      
+    const newNums = chapters
+      .map(c => c.chapter_number)
+      .filter(num => num >= startVal)
+      .sort((a, b) => a - b)
+      .slice(0, count);
+    setQuickCopyNumbers(newNums);
+  };
+
+  const changeQuickCopyModeType = (type: 'copy_paste' | 'copy_only') => {
+    setQuickCopyModeType(type);
+    localStorage.setItem('quick_copy_mode_type', type);
+    setQuickCopyStates({});
+  };
+
+  const toggleQuickCopyAutoAdvance = () => {
+    setQuickCopyAutoAdvance(prev => {
+      const next = !prev;
+      localStorage.setItem('quick_copy_auto_advance', next.toString());
+      return next;
+    });
+  };
+
+  const navigateQuickCopy = (direction: 'prev' | 'next') => {
+    const allNums = chapters.map(c => c.chapter_number).sort((a, b) => a - b);
+    if (allNums.length === 0) return;
+
+    const currentFirst = quickCopyNumbers[0] ?? (typeof quickCopyStartInput === 'number' ? quickCopyStartInput : allNums[0]);
+    const currentIndex = allNums.indexOf(currentFirst);
+    const baseIndex = currentIndex === -1 ? 0 : currentIndex;
+
+    let targetIndex = 0;
+    if (direction === 'next') {
+      targetIndex = Math.min(allNums.length - 1, baseIndex + quickCopyBoxCount);
+    } else {
+      targetIndex = Math.max(0, baseIndex - quickCopyBoxCount);
+    }
+
+    const startVal = allNums[targetIndex] || 1;
+    setQuickCopyStartInput(startVal);
+    const newNums = allNums.filter(n => n >= startVal).slice(0, quickCopyBoxCount);
+    setQuickCopyNumbers(newNums);
+    setQuickCopyStates({});
   };
 
   const handleQuickCopy = async (num: number) => {
@@ -854,6 +926,54 @@ export const NovelDetail: React.FC = () => {
       return;
     }
 
+    // MODE 1: COPY ONLY (نسخ فقط بدون لصق)
+    if (quickCopyModeType === 'copy_only') {
+      await copyToClipboard(`${chapter.title}\n\n${chapter.content_original}`);
+      setQuickCopyStates(prev => ({ ...prev, [num]: 'copied_only' }));
+
+      if (quickCopyAutoAdvance) {
+        setTimeout(() => {
+          setQuickCopyNumbers(prev => {
+            const currentMax = Math.max(...prev, 0);
+            const nextChapter = chapters
+              .map(c => c.chapter_number)
+              .filter(n => n > currentMax)
+              .sort((a, b) => a - b)[0];
+            
+            let nextNums: number[];
+            if (nextChapter) {
+              nextNums = prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
+            } else {
+              nextNums = prev.filter(n => n !== num).sort((a, b) => a - b);
+            }
+
+            if (nextNums.length > 0) {
+              setQuickCopyStartInput(nextNums[0]);
+            }
+            return nextNums;
+          });
+
+          setQuickCopyStates(prev => {
+            const newState = { ...prev };
+            delete newState[num];
+            return newState;
+          });
+        }, 500);
+      } else {
+        setTimeout(() => {
+          setQuickCopyStates(prev => {
+            const newState = { ...prev };
+            if (newState[num] === 'copied_only') {
+              delete newState[num];
+            }
+            return newState;
+          });
+        }, 1500);
+      }
+      return;
+    }
+
+    // MODE 2: COPY & AUTO-PASTE (نسخ ولصق تلقائي)
     const currentState = quickCopyStates[num] || 'idle';
 
     if (currentState === 'idle') {
@@ -893,13 +1013,13 @@ export const NovelDetail: React.FC = () => {
           
           // Advance logic
           setQuickCopyNumbers(prev => {
-            const currentMax = Math.max(...prev);
+            const currentMax = Math.max(...prev, 0);
             const nextChapter = chapters
               .map(c => c.chapter_number)
               .filter(n => n > currentMax)
               .sort((a, b) => a - b)[0];
             
-            let nextNums;
+            let nextNums: number[];
             if (nextChapter) {
               nextNums = prev.map(n => n === num ? nextChapter : n).sort((a, b) => a - b);
             } else {
@@ -976,91 +1096,273 @@ export const NovelDetail: React.FC = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[200] bg-bg-primary/95 backdrop-blur-md flex flex-col items-center justify-center p-6"
+            className="fixed inset-0 z-[200] bg-bg-primary/95 backdrop-blur-md flex flex-col items-center justify-start overflow-y-auto p-4 sm:p-8"
           >
             <button 
               onClick={() => setIsQuickCopyMode(false)}
-              className="absolute top-4 right-4 sm:top-8 sm:right-8 p-2 sm:p-4 bg-bg-secondary border border-border-primary rounded-full text-text-secondary hover:text-red-500 transition-all shadow-lg"
+              className="fixed top-4 right-4 sm:top-8 sm:right-8 z-10 p-2 sm:p-3 bg-bg-secondary border border-border-primary rounded-full text-text-secondary hover:text-red-500 transition-all shadow-lg"
+              title="إغلاق وضع النسخ السريع"
             >
-              <Plus size={24} className="rotate-45 sm:w-8 sm:h-8" />
+              <Plus size={24} className="rotate-45 sm:w-6 sm:h-6" />
             </button>
             
-            <div className="text-center mb-8 sm:mb-12 space-y-2 sm:space-y-4">
+            <div className="text-center my-3 sm:my-5 space-y-1.5 sm:space-y-2">
               <motion.div 
                 initial={{ y: -20 }}
                 animate={{ y: 0 }}
-                className="w-12 h-12 sm:w-20 sm:h-20 bg-emerald-600 rounded-2xl sm:rounded-3xl mx-auto flex items-center justify-center text-white shadow-2xl shadow-emerald-500/20 mb-4 sm:mb-6"
+                className="w-12 h-12 sm:w-16 sm:h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center text-white shadow-xl shadow-emerald-500/20 mb-2"
               >
-                <Zap size={24} className="sm:w-10 sm:h-10" fill="currentColor" />
+                {quickCopyModeType === 'copy_only' ? (
+                  <Copy size={24} className="sm:w-8 sm:h-8" />
+                ) : (
+                  <Zap size={24} className="sm:w-8 sm:h-8" fill="currentColor" />
+                )}
               </motion.div>
-              <h2 className="text-2xl sm:text-4xl font-black text-text-primary">وضع النسخ السريع</h2>
-              <p className="text-text-secondary text-sm sm:text-lg font-medium">اضغط على الفصل لنسخ النص الأصلي</p>
+              <h2 className="text-2xl sm:text-3xl font-black text-text-primary">وضع النسخ السريع</h2>
+              <p className="text-text-secondary text-xs sm:text-base font-medium">
+                {quickCopyModeType === 'copy_only'
+                  ? 'اضغط على المربع لنسخ النص الأصلي مباشرة إلى الحافظة'
+                  : 'الضغطة الأولى لنسخ النص الأصلي، والضغطة الثانية للصق الترجمة وحفظها'}
+              </p>
             </div>
 
-            <div className="flex items-center gap-3 bg-bg-secondary p-2 px-4 rounded-2xl border border-border-primary mb-8 shadow-sm">
-              <span className="text-text-secondary text-xs sm:text-sm font-bold">البدء من الفصل:</span>
-              <input
-                type="number"
-                className="w-16 sm:w-24 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-2 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors"
-                value={quickCopyStartInput}
-                onFocus={(e) => e.target.select()}
-                onChange={(e) => {
-                  const val = e.target.value === '' ? '' : parseInt(e.target.value);
-                  setQuickCopyStartInput(val);
-                  if (typeof val === 'number' && !isNaN(val)) {
-                    const newNums = chapters
-                      .map(c => c.chapter_number)
-                      .filter(num => num >= val)
-                      .sort((a, b) => a - b)
-                      .slice(0, 4);
-                    setQuickCopyNumbers(newNums);
-                  } else {
-                    setQuickCopyNumbers([]);
-                  }
-                }}
-              />
-            </div>
+            {/* Control Bar: Mode, Box Count, Navigation */}
+            <div className="w-full max-w-2xl bg-bg-secondary p-3 sm:p-4 rounded-2xl border border-border-primary mb-6 shadow-sm space-y-3">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* Mode Selector */}
+                <div className="flex items-center gap-1 bg-bg-primary p-1 rounded-xl border border-border-primary">
+                  <button
+                    type="button"
+                    onClick={() => changeQuickCopyModeType('copy_paste')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                      quickCopyModeType === 'copy_paste'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    <Zap size={14} fill={quickCopyModeType === 'copy_paste' ? 'currentColor' : 'none'} />
+                    <span>نسخ ولصق</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => changeQuickCopyModeType('copy_only')}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-bold transition-all ${
+                      quickCopyModeType === 'copy_only'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'text-text-secondary hover:text-text-primary'
+                    }`}
+                  >
+                    <Copy size={14} />
+                    <span>نسخ فقط</span>
+                  </button>
+                </div>
 
-            <div className="grid grid-cols-2 gap-4 sm:gap-6 w-full max-w-2xl">
-              {quickCopyNumbers.map((num) => (
-                <motion.button
-                  key={num}
-                  layout
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  whileHover={{ scale: 1.05, translateY: -5 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleQuickCopy(num)}
-                  className={`group relative overflow-hidden border-2 p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-xl transition-all flex flex-col items-center gap-1 sm:gap-4 ${
-                    quickCopyStates[num] === 'copied' 
-                      ? "bg-red-500/10 border-red-500 text-red-600" 
-                      : quickCopyStates[num] === 'saving'
-                        ? "bg-emerald-500/10 border-emerald-500 text-emerald-600"
-                        : "bg-bg-secondary border-border-primary hover:border-emerald-500"
-                  }`}
-                >
-                  <div className={`absolute top-0 right-0 p-2 sm:p-3 rounded-bl-xl sm:rounded-bl-2xl transition-opacity ${
-                    quickCopyStates[num] === 'copied' ? "bg-red-500/20 text-red-500 opacity-100" : "bg-emerald-500/10 text-emerald-500 opacity-0 group-hover:opacity-100"
-                  }`}>
-                    {quickCopyStates[num] === 'copied' ? <Zap size={14} className="sm:w-5 sm:h-5" /> : <Copy size={14} className="sm:w-5 sm:h-5" />}
+                {/* Box Count Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-text-secondary text-xs sm:text-sm font-bold whitespace-nowrap">عدد المربعات:</span>
+                  <div className="flex items-center gap-1 bg-bg-primary p-1 rounded-xl border border-border-primary">
+                    {[1, 2, 3, 4].map((count) => (
+                      <button
+                        key={count}
+                        type="button"
+                        onClick={() => changeQuickCopyBoxCount(count)}
+                        className={`w-8 h-8 rounded-lg text-xs sm:text-sm font-black transition-all flex items-center justify-center ${
+                          quickCopyBoxCount === count
+                            ? 'bg-emerald-600 text-white shadow-sm'
+                            : 'text-text-secondary hover:text-text-primary hover:bg-bg-secondary'
+                        }`}
+                        title={`عرض ${count} ${count === 1 ? 'مربع' : count === 2 ? 'مربعين' : 'مربعات'}`}
+                      >
+                        {count}
+                      </button>
+                    ))}
                   </div>
-                  <span className="text-[10px] sm:text-sm font-bold text-text-secondary uppercase tracking-widest">الفصل</span>
-                  <span className={`text-3xl sm:text-6xl font-black transition-colors ${
-                    quickCopyStates[num] === 'copied' ? "text-red-600" : "text-text-primary group-hover:text-emerald-600"
-                  }`}>{num}</span>
-                  {quickCopyStates[num] === 'copied' && (
-                    <span className="text-[10px] sm:text-xs font-bold text-red-500 animate-pulse mt-1">اضغط للحفظ التلقائي</span>
-                  )}
-                  {quickCopyStates[num] === 'saving' && (
-                    <Loader2 className="animate-spin text-emerald-500" size={20} />
-                  )}
-                </motion.button>
-              ))}
+                </div>
+              </div>
+
+              {/* Start Chapter & Step Navigation */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-border-primary/60">
+                <div className="flex items-center gap-2">
+                  <span className="text-text-secondary text-xs sm:text-sm font-bold whitespace-nowrap">البدء من الفصل:</span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => navigateQuickCopy('prev')}
+                      className="p-1.5 sm:p-2 bg-bg-primary hover:bg-border-primary border border-border-primary rounded-xl text-text-secondary hover:text-text-primary transition-colors"
+                      title="الفصول السابقة"
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                    <input
+                      type="number"
+                      className="w-16 sm:w-20 bg-bg-primary border border-border-primary rounded-xl px-2 py-1 sm:py-1.5 text-center font-black text-emerald-600 focus:border-emerald-500 outline-none transition-colors text-sm sm:text-base"
+                      value={quickCopyStartInput}
+                      onFocus={(e) => e.target.select()}
+                      onChange={(e) => {
+                        const val = e.target.value === '' ? '' : parseInt(e.target.value);
+                        setQuickCopyStartInput(val);
+                        if (typeof val === 'number' && !isNaN(val)) {
+                          const newNums = chapters
+                            .map(c => c.chapter_number)
+                            .filter(num => num >= val)
+                            .sort((a, b) => a - b)
+                            .slice(0, quickCopyBoxCount);
+                          setQuickCopyNumbers(newNums);
+                        } else {
+                          setQuickCopyNumbers([]);
+                        }
+                      }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => navigateQuickCopy('next')}
+                      className="p-1.5 sm:p-2 bg-bg-primary hover:bg-border-primary border border-border-primary rounded-xl text-text-secondary hover:text-text-primary transition-colors"
+                      title="الفصول التالية"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* In Copy Only Mode: Auto-Advance toggle */}
+                {quickCopyModeType === 'copy_only' ? (
+                  <button
+                    type="button"
+                    onClick={toggleQuickCopyAutoAdvance}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs sm:text-sm font-bold transition-all ${
+                      quickCopyAutoAdvance 
+                        ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600' 
+                        : 'bg-bg-primary border-border-primary text-text-secondary'
+                    }`}
+                  >
+                    <div className={`w-3.5 h-3.5 rounded-full transition-all flex items-center justify-center ${
+                      quickCopyAutoAdvance ? 'bg-emerald-600 text-white' : 'bg-border-primary'
+                    }`}>
+                      {quickCopyAutoAdvance && <Check size={10} />}
+                    </div>
+                    <span>انتقال تلقائي بعد النسخ</span>
+                  </button>
+                ) : (
+                  <span className="text-[11px] text-text-secondary">
+                    الضغطة 1: نسخ • الضغطة 2: لصق وحفظ
+                  </span>
+                )}
+              </div>
             </div>
+
+            {/* Chapters Grid */}
+            {quickCopyNumbers.length === 0 ? (
+              <div className="p-8 text-center bg-bg-secondary border border-border-primary rounded-2xl max-w-md w-full my-6 text-text-secondary">
+                <AlertCircle className="mx-auto mb-2 opacity-50" size={32} />
+                <p className="font-bold">لا توجد فصول متوفرة للعرض</p>
+                <p className="text-xs mt-1">تأكد من إدخال رقم فصل متاح في الرواية</p>
+              </div>
+            ) : (
+              <div className={`grid gap-4 sm:gap-6 w-full ${
+                quickCopyBoxCount === 1 
+                  ? 'grid-cols-1 max-w-sm sm:max-w-md' 
+                  : quickCopyBoxCount === 2 
+                    ? 'grid-cols-1 sm:grid-cols-2 max-w-xl' 
+                    : quickCopyBoxCount === 3
+                      ? 'grid-cols-1 sm:grid-cols-3 max-w-3xl'
+                      : 'grid-cols-2 max-w-2xl'
+              }`}>
+                {quickCopyNumbers.map((num) => {
+                  const chapterObj = chapters.find(c => c.chapter_number === num);
+                  const isCopiedOnly = quickCopyStates[num] === 'copied_only';
+                  const isCopiedPaste = quickCopyStates[num] === 'copied';
+                  const isSaving = quickCopyStates[num] === 'saving';
+
+                  return (
+                    <motion.button
+                      key={num}
+                      layout
+                      initial={{ scale: 0.9, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      whileHover={{ scale: 1.03, translateY: -3 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => handleQuickCopy(num)}
+                      className={`group relative overflow-hidden border-2 p-5 sm:p-8 rounded-2xl sm:rounded-3xl shadow-lg transition-all flex flex-col items-center justify-center gap-2 sm:gap-3 ${
+                        isCopiedOnly
+                          ? "bg-emerald-500/15 border-emerald-500 text-emerald-600 ring-2 ring-emerald-500/30"
+                          : isCopiedPaste 
+                            ? "bg-red-500/10 border-red-500 text-red-600" 
+                            : isSaving
+                              ? "bg-emerald-500/10 border-emerald-500 text-emerald-600"
+                              : "bg-bg-secondary border-border-primary hover:border-emerald-500"
+                      } ${quickCopyBoxCount === 1 ? 'min-h-[220px]' : 'min-h-[170px]'}`}
+                    >
+                      <div className={`absolute top-0 right-0 p-2 sm:p-3 rounded-bl-xl sm:rounded-bl-2xl transition-opacity ${
+                        isCopiedOnly 
+                          ? "bg-emerald-500/20 text-emerald-600 opacity-100" 
+                          : isCopiedPaste 
+                            ? "bg-red-500/20 text-red-500 opacity-100" 
+                            : "bg-emerald-500/10 text-emerald-500 opacity-0 group-hover:opacity-100"
+                      }`}>
+                        {isCopiedOnly ? (
+                          <Check size={16} className="sm:w-5 sm:h-5 text-emerald-600" />
+                        ) : isCopiedPaste ? (
+                          <Zap size={14} className="sm:w-5 sm:h-5" />
+                        ) : (
+                          <Copy size={14} className="sm:w-5 sm:h-5" />
+                        )}
+                      </div>
+
+                      <span className="text-[11px] sm:text-xs font-bold text-text-secondary uppercase tracking-widest">
+                        الفصل
+                      </span>
+
+                      <span className={`text-4xl sm:text-6xl font-black transition-colors ${
+                        isCopiedOnly 
+                          ? "text-emerald-600" 
+                          : isCopiedPaste 
+                            ? "text-red-600" 
+                            : "text-text-primary group-hover:text-emerald-600"
+                      }`}>
+                        {num}
+                      </span>
+
+                      {chapterObj?.title && quickCopyBoxCount <= 2 && (
+                        <span className="text-xs text-text-secondary font-medium line-clamp-1 max-w-[220px] text-center" dir="ltr">
+                          {chapterObj.title}
+                        </span>
+                      )}
+
+                      {isCopiedOnly && (
+                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 mt-1 animate-pulse">
+                          <Check size={14} />
+                          <span>تم نسخ الفصل بنجاح!</span>
+                        </span>
+                      )}
+                      {isCopiedPaste && (
+                        <span className="text-[10px] sm:text-xs font-bold text-red-500 animate-pulse mt-1">
+                          اضغط للحفظ التلقائي
+                        </span>
+                      )}
+                      {isSaving && (
+                        <span className="text-xs font-bold text-emerald-600 flex items-center gap-1 mt-1">
+                          <Loader2 className="animate-spin" size={16} />
+                          <span>جارٍ الحفظ...</span>
+                        </span>
+                      )}
+                      {!isCopiedOnly && !isCopiedPaste && !isSaving && (
+                        <span className="text-[10px] sm:text-xs text-text-secondary opacity-60 group-hover:opacity-100 transition-opacity">
+                          {quickCopyModeType === 'copy_only' ? 'اضغط للنسخ فقط' : 'اضغط للنسخ'}
+                        </span>
+                      )}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            )}
             
-            <div className="mt-8 sm:mt-16 text-text-secondary text-xs sm:text-sm font-medium flex items-center gap-2 bg-bg-secondary px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl border border-border-primary">
+            <div className="mt-6 sm:mt-10 text-text-secondary text-xs sm:text-sm font-medium flex items-center gap-2 bg-bg-secondary px-4 py-2 sm:px-6 sm:py-3 rounded-xl sm:rounded-2xl border border-border-primary">
               <Sparkles size={16} className="sm:w-5 sm:h-5 text-emerald-500" />
-              <span>سيتم نسخ النص الأصلي تلقائياً</span>
+              <span>
+                {quickCopyModeType === 'copy_only'
+                  ? 'في وضع النسخ فقط: يتم نسخ الفصل إلى الحافظة فوراً بدون الحاجة للصق'
+                  : 'في وضع النسخ واللصق: الضغطة الأولى تنسخ الفصل والضغطة الثانية تحفظ الترجمة'}
+              </span>
             </div>
           </motion.div>
         )}
