@@ -115,6 +115,13 @@ export const NovelDetail: React.FC = () => {
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
+  // Save the position in "Copy Only" mode so it persists on refresh
+  useEffect(() => {
+    if (isQuickCopyMode && quickCopyModeType === 'copy_only' && quickCopyNumbers.length > 0 && novel) {
+      localStorage.setItem(`quick_copy_only_last_num_${novel.id}`, quickCopyNumbers[0].toString());
+    }
+  }, [isQuickCopyMode, quickCopyModeType, quickCopyNumbers, novel]);
+
   useEffect(() => {
     if (id) {
       fetchNovel(id);
@@ -849,8 +856,12 @@ export const NovelDetail: React.FC = () => {
       .sort((a, b) => b.chapter_number - a.chapter_number)[0];
     
     let lastNum = 1;
+    const savedCopyOnlyNum = novel ? localStorage.getItem(`quick_copy_only_last_num_${novel.id}`) : null;
+
     if (selectedChapter) {
       lastNum = selectedChapter.chapter_number;
+    } else if (quickCopyModeType === 'copy_only' && savedCopyOnlyNum && !isNaN(parseInt(savedCopyOnlyNum, 10))) {
+      lastNum = parseInt(savedCopyOnlyNum, 10);
     } else if (lastTranslatedChapter) {
       lastNum = lastTranslatedChapter.chapter_number;
     }
