@@ -503,18 +503,22 @@ export const NovelDetail: React.FC = () => {
             const content = await item.load(book.load.bind(book));
             const doc = (typeof content === 'string') 
               ? new DOMParser().parseFromString(content, 'text/html')
-              : content as Document;
+              : content as any;
             
-            if (!doc || !doc.body) continue;
+            if (!doc) continue;
+            
+            const bodyElement = doc.body || (doc.querySelector ? doc.querySelector('body') : null) || doc;
+            if (!bodyElement) continue;
 
             // Try to get title from headers
             let headerTitle = "";
-            const header = doc.querySelector('h1, h2, h3, h4, h5, h6');
+            const header = (doc.querySelector && doc.querySelector('h1, h2, h3, h4, h5, h6')) || 
+                           (bodyElement.querySelector && bodyElement.querySelector('h1, h2, h3, h4, h5, h6'));
             if (header) {
               headerTitle = header.textContent?.trim() || "";
             }
 
-            const textContent = doc.body.textContent || "";
+            const textContent = bodyElement.textContent || "";
             const trimmedText = textContent.trim();
             
             // Skip very short sections (like nav, title page)
