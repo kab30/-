@@ -114,6 +114,7 @@ export const NovelDetail: React.FC = () => {
     return saved !== null ? saved === 'true' : true;
   });
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isFixingNumbers, setIsFixingNumbers] = useState(false);
 
   // Save the position in "Copy Only" mode so it persists on refresh
   useEffect(() => {
@@ -484,8 +485,11 @@ export const NovelDetail: React.FC = () => {
       }
     }
     
-    const existingNumbers = new Set(allExistingChapters.map(c => c.chapter_number));
-    const maxExistingNum = allExistingChapters.reduce((max, c) => Math.max(max, c.chapter_number), 0);
+    const stateNumbers = chapters.map(c => c.chapter_number);
+    const dbNumbers = allExistingChapters.map(c => c.chapter_number);
+    const combinedNumbers = Array.from(new Set([...stateNumbers, ...dbNumbers]));
+    const existingNumbers = new Set(combinedNumbers);
+    const maxExistingNum = combinedNumbers.reduce((max, c) => Math.max(max, c), 0);
 
     const isEpub = file.name.toLowerCase().endsWith('.epub');
 
@@ -535,12 +539,20 @@ export const NovelDetail: React.FC = () => {
               }
             } else {
               // Single chapter spine item
-              const candidateText = headerTitle ? (headerTitle + '\n' + trimmedText) : trimmedText;
-              const extractedNum = extractChapterNumberFromText(candidateText);
+              // Extract number from headerTitle first, then first line, then candidate text
+              let chapterNum = NaN;
+              if (headerTitle) {
+                chapterNum = extractChapterNumberFromText(headerTitle);
+              }
+              if (isNaN(chapterNum)) {
+                const firstLine = trimmedText.split('\n')[0].trim();
+                chapterNum = extractChapterNumberFromText(firstLine);
+              }
+              if (isNaN(chapterNum)) {
+                chapterNum = extractChapterNumberFromText(trimmedText);
+              }
               
-              let chapterNum: number;
-              if (!isNaN(extractedNum) && extractedNum > 0) {
-                chapterNum = extractedNum;
+              if (!isNaN(chapterNum) && chapterNum > 0) {
                 currentMax = Math.max(currentMax, chapterNum);
               } else {
                 chapterNum = ++currentMax;
@@ -854,31 +866,97 @@ export const NovelDetail: React.FC = () => {
     setShowCheckModal(true);
   };
 
+  const handleFixChapterNumbersFromTitles = async () => {
+    if (chapters.length === 0) return;
+    
+    // Find chapters where extractChapterNumberFromText(c.title) returns a valid number differing from chapter_number
+    const candidates = chapters.map(c => {
+      const detected = extractChapterNumberFromText(c.title);
+      return {
+        chapter: c,
+        detectedNum: detected,
+        needsUpdate: !isNaN(detected) && detected > 0 && detected !== c.chapter_number
+      };
+    }).filter(item => item.needsUpdate);
+
+    if (candidates.length === 0) {
+      alert('جميع أرقام الفصول متطابقة ومضبوطة بالفعل وفق عناوينها.');
+      return;
+    }
+
+    if (!confirm(`تم العثور على ${candidates.length} فصل لا تطابق أرقامها أرقام العناوين (مثل 20: أو الفصل 20). هل ترغب في تصحيح أرقامها تلقائياً؟`)) {
+      return;
+    }
+
+    setIsFixingNumbers(true);
+    let updatedCount = 0;
+
+    for (const item of candidates) {
+      const { error } = await supabase
+        .from('chapters')
+        .update({ chapter_number: item.detectedNum })
+        .eq('id', item.chapter.id);
+      
+      if (!error) {
+        updatedCount++;
+      }
+    }
+
+    if (novel) {
+      await fetchChapters(novel.id);
+    }
+    setIsFixingNumbers(false);
+    alert(`تم تصحيح أرقام ${updatedCount} فصل بنجاح.`);
+  };
+
   const enterQuickCopyMode = () => {
+    const sortedChapters = [...chapters].sort((a, b) => a.chapter_number - b.chapter_number);
+    if (sortedChapters.length === 0) {
+      alert('لا توجد فصول متوفرة في هذه الرواية');
+      return;
+    }
+
+    const minChapterNum = sortedChapters[0].chapter_number;
+
     const lastTranslatedChapter = [...chapters]
       .filter(c => c.content_arabic && c.content_arabic.trim().length > 0)
       .sort((a, b) => b.chapter_number - a.chapter_number)[0];
     
-    let lastNum = 1;
+    let lastNum = minChapterNum;
     const savedCopyOnlyNum = novel ? localStorage.getItem(`quick_copy_only_last_num_${novel.id}`) : null;
 
-    if (selectedChapter) {
+    if (quickCopyModeType === 'copy_only' && savedCopyOnlyNum && !isNaN(parseInt(savedCopyOnlyNum, 10))) {
+      const parsed = parseInt(savedCopyOnlyNum, 10);
+      if (chapters.some(c => c.chapter_number === parsed)) {
+        lastNum = parsed;
+      }
+    } else if (quickCopyModeType === 'copy_paste' && lastTranslatedChapter) {
+      // Find the first untranslated chapter following or at the last translated chapter
+      const nextUntranslated = sortedChapters.find(c => c.chapter_number > lastTranslatedChapter.chapter_number && (!c.content_arabic || c.content_arabic.trim().length === 0));
+      if (nextUntranslated) {
+        lastNum = nextUntranslated.chapter_number;
+      } else {
+        lastNum = lastTranslatedChapter.chapter_number;
+      }
+    } else if (selectedChapter && selectedChapter.chapter_number >= minChapterNum) {
       lastNum = selectedChapter.chapter_number;
-    } else if (quickCopyModeType === 'copy_only' && savedCopyOnlyNum && !isNaN(parseInt(savedCopyOnlyNum, 10))) {
-      lastNum = parseInt(savedCopyOnlyNum, 10);
-    } else if (lastTranslatedChapter) {
-      lastNum = lastTranslatedChapter.chapter_number;
+    } else {
+      lastNum = minChapterNum;
     }
     
     const count = quickCopyBoxCount || 4;
-    const initialNums = chapters
+    let initialNums = sortedChapters
       .map(c => c.chapter_number)
       .filter(num => num >= lastNum)
-      .sort((a, b) => a - b)
       .slice(0, count);
       
+    if (initialNums.length === 0) {
+      initialNums = sortedChapters.slice(0, count).map(c => c.chapter_number);
+      lastNum = initialNums[0] ?? minChapterNum;
+    }
+      
     setQuickCopyNumbers(initialNums);
-    setQuickCopyStartInput(lastNum);
+    setQuickCopyStartInput(initialNums[0] ?? lastNum);
     setQuickCopyStates({});
     setIsQuickCopyMode(true);
   };
@@ -888,7 +966,7 @@ export const NovelDetail: React.FC = () => {
     localStorage.setItem('quick_copy_box_count', count.toString());
     const startVal = typeof quickCopyStartInput === 'number' 
       ? quickCopyStartInput 
-      : (quickCopyNumbers[0] ?? 1);
+      : (quickCopyNumbers[0] ?? (chapters[0]?.chapter_number || 1));
       
     const newNums = chapters
       .map(c => c.chapter_number)
@@ -927,7 +1005,7 @@ export const NovelDetail: React.FC = () => {
       targetIndex = Math.max(0, baseIndex - quickCopyBoxCount);
     }
 
-    const startVal = allNums[targetIndex] || 1;
+    const startVal = allNums[targetIndex] ?? allNums[0];
     setQuickCopyStartInput(startVal);
     const newNums = allNums.filter(n => n >= startVal).slice(0, quickCopyBoxCount);
     setQuickCopyNumbers(newNums);
@@ -1223,6 +1301,9 @@ export const NovelDetail: React.FC = () => {
                             .sort((a, b) => a - b)
                             .slice(0, quickCopyBoxCount);
                           setQuickCopyNumbers(newNums);
+                          if (quickCopyModeType === 'copy_only' && novel && newNums.length > 0) {
+                            localStorage.setItem(`quick_copy_only_last_num_${novel.id}`, newNums[0].toString());
+                          }
                         } else {
                           setQuickCopyNumbers([]);
                         }
@@ -1565,6 +1646,15 @@ export const NovelDetail: React.FC = () => {
             >
               <FileSearch size={14} className="sm:w-4 sm:h-4" />
               <span>فحص النقص</span>
+            </button>
+            <button 
+              onClick={handleFixChapterNumbersFromTitles}
+              disabled={isFixingNumbers}
+              className="bg-bg-secondary text-text-secondary hover:text-emerald-600 px-3 py-1.5 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium hover:bg-border-primary transition-colors flex items-center gap-2 border border-border-primary disabled:opacity-50"
+              title="تصحيح أرقام الفصول بناءً على العناوين (مثل 20: أو الفصل 20)"
+            >
+              <RefreshCw size={14} className={`sm:w-4 sm:h-4 ${isFixingNumbers ? 'animate-spin text-emerald-600' : ''}`} />
+              <span>تصحيح الأرقام</span>
             </button>
           </div>
           

@@ -105,8 +105,8 @@ export interface ParsedChapterItem {
 }
 
 // Regex matching chapter headers in Chinese, English, Arabic, and numeric forms
-// Handles leading symbols/punctuation like: ! ! 第九章, 【第9章】, === 第九章 ===, 10: Chapter 10, Volume 1 Chapter 1
-export const CHAPTER_START_REGEX = /^[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*(?:(?:Volume|Vol\.|Vol|Book|Part|الجزء|المجلد|第\s*\d+\s*卷)\s*\d*[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*)?(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/gim;
+// Handles leading symbols/punctuation like: ! ! 第九章, 【第9章】, === 第九章 ===, 10: Chapter 10, Volume 1 Chapter 1, 21: Title
+export const CHAPTER_START_REGEX = /^[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*(?:(?:Volume|Vol\.|Vol|Book|Part|الجزء|المجلد|第\s*\d+\s*卷)\s*\d*[^a-zA-Z\u4e00-\u9fa5\u0600-\u06ff\r\n]*)?(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch|Episode|Ep\.|Ep)\s*(\d+)|(?:الفصل|فصل|البارت|بارت)\s*(\d+)|(?:\[|【|\(|#)?\s*(\d+)\s*(?:\]|】|\))?\s*[:：.\-–—、]\s*)/gim;
 
 export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpExecArray): number {
   // Group 1: Chinese or mixed numeral (e.g. 第一, 第1, 第百二十三)
@@ -124,6 +124,11 @@ export function extractChapterNumberFromMatch(match: RegExpMatchArray | RegExpEx
     const num = parseInt(match[3], 10);
     if (!isNaN(num)) return num;
   }
+  // Group 4: Numeric prefix like "21: ", "21. ", "[21] "
+  if (match[4]) {
+    const num = parseInt(match[4], 10);
+    if (!isNaN(num)) return num;
+  }
   return NaN;
 }
 
@@ -139,11 +144,30 @@ export function cleanChapterTitle(rawTitle: string): string {
 
 export function extractChapterNumberFromText(text: string): number {
   if (!text) return NaN;
-  const regex = /(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch)\s*(\d+)|(?:الفصل|فصل)\s*(\d+))/i;
-  const match = text.match(regex);
-  if (match) {
-    return extractChapterNumberFromMatch(match);
+  const firstLine = text.trim().split('\n')[0].trim();
+
+  // 1. Check if first line/title begins with a number prefix: "20: ...", "21. ...", "[21] ...", "21 - ..."
+  const prefixMatch = firstLine.match(/^\s*(?:\[|【|\(|#)?\s*(\d+)\s*(?:\]|】|\))?\s*[:：.\-–—、\s]\s*([^\r\n]*)/);
+  if (prefixMatch) {
+    const num = parseInt(prefixMatch[1], 10);
+    if (!isNaN(num) && num > 0) return num;
   }
+
+  // 2. Check standard keywords: 第X章, Chapter X, الفصل X, etc.
+  const regex = /(?:第\s*([0-9０-９零〇一壹二贰两兩三叁仨四肆五伍六陆七柒八捌九玖十拾百佰千仟万萬亿億\d\s]+?)\s*(?:章|节|回|折|幕|集|话|話)|(?:Chapter|Chap\.|Chap|Ch\.|Ch|Episode|Ep\.|Ep)\s*(\d+)|(?:الفصل|فصل|البارت|بارت)\s*(\d+))/i;
+
+  const matchFirstLine = firstLine.match(regex);
+  if (matchFirstLine) {
+    return extractChapterNumberFromMatch(matchFirstLine);
+  }
+
+  // Check candidate text (only first 300 characters to prevent catching numbers deep in the body)
+  const candidate = text.trim().substring(0, 300);
+  const matchCandidate = candidate.match(regex);
+  if (matchCandidate) {
+    return extractChapterNumberFromMatch(matchCandidate);
+  }
+
   return NaN;
 }
 
